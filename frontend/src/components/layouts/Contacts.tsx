@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { FaPlus, FaTimes, FaUserCircle, FaTrash } from 'react-icons/fa';
 
-//test
 
 type Contact = {
     id: number;
