@@ -33,7 +33,7 @@ function Contacts() {
   const [fileData, setFileData] = useState<string | ArrayBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sample companies for dropdowns
+  // Sample companies for dropdown
   const companies = [
     { id: 1, name: "Acme Corporation" },
     { id: 2, name: "Globex Industries" },
