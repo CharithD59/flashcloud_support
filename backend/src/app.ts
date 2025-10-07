@@ -4,7 +4,7 @@ import path from "path";
 //import dashboardRoutes from "./routes/dashboardRoutes";
 import ticketsRoutes from "./routes/ticketsRoutes";
 //import contactRoutes from "./routes/contactRoutes";
-//import companiesRoutes from "./routes/companiesRoutes";
+import companiesRoutes from "./routes/companiesRoutes";
 
 const app = express();
 
@@ -29,6 +29,6 @@ app.use(express.json());
 //app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/tickets", ticketsRoutes);
 //app.use("/api/contacts", contactRoutes);
-//app.use("/api/companies", companiesRoutes);
+app.use("/api/companies", companiesRoutes);
 
 export default app;
