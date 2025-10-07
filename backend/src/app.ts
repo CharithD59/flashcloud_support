@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 //import dashboardRoutes from "./routes/dashboardRoutes";
-//import ticketsRoutes from "./routes/ticketsRoutes";
+import ticketsRoutes from "./routes/ticketsRoutes";
 //import contactRoutes from "./routes/contactRoutes";
 //import companiesRoutes from "./routes/companiesRoutes";
 
@@ -27,7 +27,7 @@ app.use(express.json());
 );*/
 
 //app.use("/api/dashboard", dashboardRoutes);
-//app.use("/api/tickets", ticketsRoutes);
+app.use("/api/tickets", ticketsRoutes);
 //app.use("/api/contacts", contactRoutes);
 //app.use("/api/companies", companiesRoutes);
 
