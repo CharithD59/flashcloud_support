@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTimes, FaUserCircle, FaTrash } from "react-icons/fa";
 
 type Contact = {
@@ -8,12 +8,20 @@ type Contact = {
   phone: string;
   email: string;
   company: string;
-  profileImage: string | null;
+  profileImage: string | null; // server returns '/uploads/xxx.jpg' or null
   createdAt: string;
 };
 
+const API_BASE =
+  (import.meta as any)?.env?.VITE_API_URL || "http://localhost:5000";
+
 function Contacts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Form state (kept as you had)
   const [formData, setFormData] = useState<{
     firstName: string;
     lastName: string;
@@ -29,11 +37,11 @@ function Contacts() {
     company: "",
     profileImage: null,
   });
+
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [fileData, setFileData] = useState<string | ArrayBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sample companies for dropdown
+  // Static companies list (you can swap this to a backend call later)
   const companies = [
     { id: 1, name: "Acme Corporation" },
     { id: 2, name: "Globex Industries" },
@@ -42,60 +50,43 @@ function Contacts() {
     { id: 5, name: "Wayne Enterprises" },
   ];
 
-  // Sample contact data
-  const [contacts, setContacts] = useState<Contact[]>([
-    {
-      id: 1,
-      firstName: "John",
-      lastName: "Doe",
-      phone: "555-0101",
-      email: "john.doe@example.com",
-      company: "Acme Corporation",
-      profileImage: null,
-      createdAt: "2023-05-15 09:30:45",
-    },
-    {
-      id: 2,
-      firstName: "Jane",
-      lastName: "Smith",
-      phone: "555-0202",
-      email: "jane.smith@example.com",
-      company: "Globex Industries",
-      profileImage: null,
-      createdAt: "2023-06-10 14:12:30",
-    },
-    {
-      id: 3,
-      firstName: "Michael",
-      lastName: "Johnson",
-      phone: "555-0303",
-      email: "michael.johnson@example.com",
-      company: "Initech LLC",
-      profileImage: null,
-      createdAt: "2023-07-22 11:05:20",
-    },
-    {
-      id: 4,
-      firstName: "Emily",
-      lastName: "Davis",
-      phone: "555-0404",
-      email: "emily.davis@example.com",
-      company: "Umbrella Corp",
-      profileImage: null,
-      createdAt: "2023-08-01 16:45:10",
-    },
-    {
-      id: 5,
-      firstName: "William",
-      lastName: "Brown",
-      phone: "555-0505",
-      email: "william.brown@example.com",
-      company: "Stark Industries",
-      profileImage: null,
-      createdAt: "2023-09-12 08:22:55",
-    },
-  ]);
+  // ----- Helpers -----
+  const imgSrc = (p: string | null) => {
+    if (!p) return null;
+    // If backend returns '/uploads/xxx', prepend API base
+    return p.startsWith("http") ? p : `${API_BASE}${p}`;
+  };
 
+  // ----- Load contacts -----
+  const fetchContacts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // If your backend supports pagination, add ?page=1&pageSize=50
+      const res = await fetch(`${API_BASE}/api/contacts`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      // If your backend returns { items, total, ... }:
+      const items: Contact[] = Array.isArray(data)
+        ? data
+        : Array.isArray(data.items)
+        ? data.items
+        : [];
+
+      setContacts(items);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to fetch contacts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  // ----- Form handlers -----
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -114,42 +105,20 @@ function Contacts() {
         profileImage: file,
       }));
 
-      // Create preview
+      // Preview image locally
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
-      };
+      reader.onloadend = () => setPreviewImage(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
   const removeImage = () => {
-    setFormData((prev) => ({
-      ...prev,
-      profileImage: null,
-    }));
+    setFormData((prev) => ({ ...prev, profileImage: null }));
     setPreviewImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    // Add new contact to the list
-    const newContact = {
-      id: contacts.length + 1,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phone: formData.phone,
-      email: formData.email,
-      company: formData.company,
-      profileImage: previewImage, // Store the preview URL or upload to server
-      createdAt: new Date().toLocaleString(),
-    };
-
-    setContacts([...contacts, newContact]);
-    setIsModalOpen(false);
+  const resetForm = () => {
     setFormData({
       firstName: "",
       lastName: "",
@@ -159,6 +128,47 @@ function Contacts() {
       profileImage: null,
     });
     setPreviewImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    try {
+      setError(null);
+      // Build multipart/form-data request
+      const body = new FormData();
+      body.append("firstName", formData.firstName);
+      body.append("lastName", formData.lastName);
+      body.append("email", formData.email);
+      if (formData.phone) body.append("phone", formData.phone);
+      if (formData.company) body.append("company", formData.company);
+      if (formData.profileImage) {
+        body.append("profileImage", formData.profileImage);
+      }
+
+      const res = await fetch(`${API_BASE}/api/contacts`, {
+        method: "POST",
+        body, // let the browser set Content-Type boundary
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      // Server returns the created contact
+      const created: Contact = await res.json();
+
+      // Option 1: Refetch the list (ensures consistency)
+      await fetchContacts();
+
+      // Option 2: Optimistically add to state (uncomment if preferred)
+      // setContacts(prev => [created, ...prev]);
+
+      resetForm();
+      setIsModalOpen(false);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to save contact");
+    }
   };
 
   return (
@@ -178,6 +188,16 @@ function Contacts() {
             Add Contact
           </button>
         </div>
+
+        {/* Alerts */}
+        {loading && (
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Loading…
+          </div>
+        )}
+        {error && (
+          <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+        )}
 
         {/* Contact table */}
         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 bg-white dark:bg-gray-900 shadow-sm">
@@ -205,6 +225,17 @@ function Contacts() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {!loading && contacts.length === 0 && (
+                <tr>
+                  <td
+                    className="px-6 py-4 text-gray-500 dark:text-gray-400"
+                    colSpan={6}
+                  >
+                    No contacts found.
+                  </td>
+                </tr>
+              )}
+
               {contacts.map((contact) => (
                 <tr
                   key={contact.id}
@@ -213,29 +244,40 @@ function Contacts() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     {contact.profileImage ? (
                       <img
-                        src={contact.profileImage}
+                        src={imgSrc(contact.profileImage) || ""}
                         alt="Profile"
                         className="w-10 h-10 rounded-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
                       />
                     ) : (
                       <FaUserCircle className="w-10 h-10 text-gray-400" />
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{`${contact.firstName} ${contact.lastName}`}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {contact.phone}
+                    {`${contact.firstName} ${contact.lastName}`}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {contact.phone || "—"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {contact.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {contact.company}
+                    {contact.company || "—"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <button className="text-blue-600 dark:text-blue-400 hover:underline mr-3">
+                    <button
+                      className="text-blue-600 dark:text-blue-400 hover:underline mr-3"
+                      onClick={() => alert("Edit not implemented yet")}
+                    >
                       Edit
                     </button>
-                    <button className="text-red-600 dark:text-red-400 hover:underline">
+                    <button
+                      className="text-red-600 dark:text-red-400 hover:underline"
+                      onClick={() => alert("Delete not implemented yet")}
+                    >
                       Delete
                     </button>
                   </td>
@@ -256,7 +298,7 @@ function Contacts() {
                 <button
                   onClick={() => {
                     setIsModalOpen(false);
-                    setPreviewImage(null);
+                    resetForm();
                   }}
                   className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
                 >
@@ -407,7 +449,7 @@ function Contacts() {
                     type="button"
                     onClick={() => {
                       setIsModalOpen(false);
-                      setPreviewImage(null);
+                      resetForm();
                     }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
