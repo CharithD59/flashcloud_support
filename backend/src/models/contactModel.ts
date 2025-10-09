@@ -106,3 +106,29 @@ export async function createContact(input: {
 
   return rows[0] as unknown as Contact;
 }
+
+export async function getContactById(id: number) {
+  const [rows] = await pool.query("SELECT * FROM contacts WHERE id = ?", [id]);
+  const contacts = rows as any[];
+  return contacts.length ? contacts[0] : null;
+}
+
+export async function updateContact(id: number, contact: Contact) {
+  const { firstName, lastName, phone, email, company, profileImage } = contact;
+
+  await pool.query(
+    `
+    UPDATE contacts
+    SET first_name = ?, last_name = ?, phone = ?, email = ?, company = ?, profile_image = ?
+    WHERE id = ?;
+    `,
+    [firstName, lastName, phone, email, company, profileImage, id]
+  );
+
+  const updated = await getContactById(id);
+  return updated;
+}
+
+export async function deleteContact(id: number) {
+  await pool.query("DELETE FROM contacts WHERE id = ?", [id]);
+}

@@ -1,5 +1,14 @@
 import type { Request, Response } from "express";
-import { getContacts, createContact } from "../models/contactModel.js";
+import {
+  getContacts,
+  createContact,
+  getContactById,
+  updateContact,
+  deleteContact,
+} from "../models/contactModel.js";
+import { pool } from "../config/db.js";
+
+// Multer augments Express.Request with 'file', so no need for custom interface
 
 export async function list(req: Request, res: Response) {
   try {
@@ -30,8 +39,8 @@ export async function create(req: Request, res: Response) {
 
     // If multer processed an image
     let profileImage: string | null = null;
-    if (req.file) {
-      profileImage = `/uploads/${req.file.filename}`;
+    if ((req as any).file) {
+      profileImage = `/uploads/${(req as any).file.filename}`;
     }
 
     const created = await createContact({
@@ -50,5 +59,64 @@ export async function create(req: Request, res: Response) {
     }
     console.error("Error creating contact:", err);
     res.status(500).json({ error: "Failed to create contact" });
+  }
+}
+
+export async function edit(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid contact ID" });
+    }
+
+    const { firstName, lastName, phone, email, company } = req.body;
+
+    const existing = await getContactById(Number(id));
+    if (!existing) {
+      return res.status(404).json({ error: "Contact not found" });
+    }
+
+    let profileImage = existing.profileImage;
+    if ((req as any).file) {
+      profileImage = `/uploads/${(req as any).file.filename}`;
+    }
+
+    const updatedContact = {
+      ...existing,
+      firstName: firstName ?? existing.firstName,
+      lastName: lastName ?? existing.lastName,
+      phone: phone ?? existing.phone,
+      email: email ?? existing.email,
+      company: company ?? existing.company,
+      profileImage,
+    };
+
+    const result = await updateContact(id, updatedContact);
+    res.json(result);
+  } catch (err) {
+    console.error("Error updating contact:", err);
+    res.status(500).json({ error: "Failed to update contact" });
+  }
+}
+
+export async function remove(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid contact ID" });
+    }
+
+    const existing = await getContactById(id);
+    if (!existing) {
+      return res.status(404).json({ error: "Contact not found" });
+    }
+
+    await deleteContact(id);
+    res.status(200).json({ message: "Contact deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting contact:", err);
+    res.status(500).json({ error: "Failed to delete contact" });
   }
 }

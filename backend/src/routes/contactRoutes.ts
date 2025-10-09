@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { list, create } from "../controllers/contactController.js";
+import {
+  list,
+  create,
+  edit,
+  remove,
+} from "../controllers/contactController.js";
 import multer from "multer";
 import path from "node:path";
 import fs from "node:fs";
@@ -25,5 +30,9 @@ const upload = multer({ storage });
 router.get("/", list);
 
 router.post("/", upload.single("profileImage"), create);
+
+router.put("/:id", upload.single("profileImage"), edit);
+
+router.delete("/:id", remove);
 
 export default router;
