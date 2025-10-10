@@ -1,5 +1,11 @@
 import type { Request, Response } from "express";
-import { listCompanies, createCompany } from "../models/companiesModel.js";
+import {
+  listCompanies,
+  createCompany,
+  getContactsByCompanyId,
+  updateCompanyById,
+  deleteCompanyById,
+} from "../models/companiesModel.js";
 
 export async function list(req: Request, res: Response) {
   try {
@@ -44,5 +50,45 @@ export async function create(req: Request, res: Response) {
       return res.status(409).json({ error: "Company name already exists" });
     }
     res.status(500).json({ error: "Failed to create company" });
+  }
+}
+
+export async function getContactsByCompany(req: Request, res: Response) {
+  try {
+    const companyId = Number(req.params.companyId);
+    if (isNaN(companyId)) {
+      return res.status(400).json({ error: "Invalid company ID" });
+    }
+
+    const contacts = await getContactsByCompanyId(companyId);
+    res.status(200).json(contacts);
+  } catch (err) {
+    console.error("Error fetching contacts by company:", err);
+    res.status(500).json({ error: "Failed to fetch contacts" });
+  }
+}
+
+export async function updateCompany(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const { companyName, phone, email, address } = req.body;
+
+    await updateCompanyById(id, companyName, phone, email, address);
+    res.json({ message: "Company updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update company" });
+  }
+}
+
+export async function deleteCompany(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+
+    await deleteCompanyById(id);
+    res.json({ message: "Company deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete company" });
   }
 }

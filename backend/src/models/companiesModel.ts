@@ -84,3 +84,48 @@ export async function createCompany(input: NewCompanyInput): Promise<Company> {
     createdAt: String(row.createdAt),
   };
 }
+
+export async function getContactsByCompanyId(companyId: number) {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+    SELECT
+      id,
+      first_name AS firstName,
+      last_name AS lastName,
+      phone,
+      email,
+      company,
+      profile_image AS profileImage,
+      DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+    FROM contacts
+    WHERE company = (
+      SELECT name FROM companies WHERE id = ?
+    )
+    ORDER BY id DESC;
+    `,
+    [companyId]
+  );
+
+  return rows;
+}
+
+export async function updateCompanyById(
+  id: number,
+  companyName: string,
+  phone?: string,
+  email?: string,
+  address?: string
+) {
+  await pool.query(
+    `
+      UPDATE companies 
+      SET name = ?, phone = ?, email = ?, address = ?
+      WHERE id = ?
+    `,
+    [companyName, phone || null, email || null, address || null, id]
+  );
+}
+
+export async function deleteCompanyById(id: number) {
+  await pool.query("DELETE FROM companies WHERE id = ?", [id]);
+}

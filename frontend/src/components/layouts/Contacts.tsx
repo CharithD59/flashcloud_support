@@ -21,6 +21,8 @@ function Contacts() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+
   // Form state (kept as you had)
   const [formData, setFormData] = useState<{
     firstName: string;
@@ -44,10 +46,11 @@ function Contacts() {
   // Static companies list (you can swap this to a backend call later)
   const companies = [
     { id: 1, name: "Acme Corporation" },
-    { id: 2, name: "Globex Industries" },
-    { id: 3, name: "Initech LLC" },
-    { id: 4, name: "Umbrella Corp" },
-    { id: 5, name: "Wayne Enterprises" },
+    { id: 2, name: "iphonik" },
+    { id: 3, name: "Umbrella Corp" },
+    { id: 4, name: "ABC Solution" },
+    { id: 5, name: "SSP Solution" },
+    { id: 6, name: "UDC Coporation" },
   ];
 
   // ----- Helpers -----
@@ -128,15 +131,15 @@ function Contacts() {
       profileImage: null,
     });
     setPreviewImage(null);
+    setEditingContact(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  //-------save or Update Contact -----
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     try {
       setError(null);
-      // Build multipart/form-data request
       const body = new FormData();
       body.append("firstName", formData.firstName);
       body.append("lastName", formData.lastName);
@@ -147,27 +150,55 @@ function Contacts() {
         body.append("profileImage", formData.profileImage);
       }
 
-      const res = await fetch(`${API_BASE}/api/contacts`, {
-        method: "POST",
-        body, // let the browser set Content-Type boundary
+      const url = editingContact
+        ? `${API_BASE}/api/contacts/${editingContact.id}`
+        : `${API_BASE}/api/contacts`;
+      const method = editingContact ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        body,
       });
       if (!res.ok) {
         const msg = await res.text();
         throw new Error(msg || `HTTP ${res.status}`);
       }
-      // Server returns the created contact
-      const created: Contact = await res.json();
 
-      // Option 1: Refetch the list (ensures consistency)
       await fetchContacts();
-
-      // Option 2: Optimistically add to state (uncomment if preferred)
-      // setContacts(prev => [created, ...prev]);
-
       resetForm();
       setIsModalOpen(false);
     } catch (e: any) {
       setError(e?.message ?? "Failed to save contact");
+    }
+  };
+
+  // ----- Handle Edit -----
+  const handleEdit = (contact: Contact) => {
+    setEditingContact(contact);
+    setFormData({
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      phone: contact.phone,
+      email: contact.email,
+      company: contact.company,
+      profileImage: null,
+    });
+    setPreviewImage(imgSrc(contact.profileImage));
+    setIsModalOpen(true);
+  };
+
+  // ----- Handle Delete -----
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this contact?"))
+      return;
+    try {
+      const res = await fetch(`${API_BASE}/api/contacts/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(`Failed to delete contact`);
+      await fetchContacts();
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to delete contact");
     }
   };
 
@@ -177,7 +208,7 @@ function Contacts() {
         {/* Header with Add Contact button */}
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Contact Details
+            {editingContact ? "Edit Contact" : "Add New Contact"}
           </h1>
           <button
             type="button"
@@ -270,13 +301,13 @@ function Contacts() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       className="text-blue-600 dark:text-blue-400 hover:underline mr-3"
-                      onClick={() => alert("Edit not implemented yet")}
+                      onClick={() => handleEdit(contact)}
                     >
                       Edit
                     </button>
                     <button
                       className="text-red-600 dark:text-red-400 hover:underline"
-                      onClick={() => alert("Delete not implemented yet")}
+                      onClick={() => handleDelete(contact.id)}
                     >
                       Delete
                     </button>
@@ -293,7 +324,7 @@ function Contacts() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
               <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 p-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Add New Contact
+                  {editingContact ? "Edit Contact" : "Add New Contact"}
                 </h2>
                 <button
                   onClick={() => {
@@ -459,7 +490,7 @@ function Contacts() {
                     type="submit"
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    Save Contact
+                    {editingContact ? "Update Contact" : "Save Contact"}
                   </button>
                 </div>
               </form>

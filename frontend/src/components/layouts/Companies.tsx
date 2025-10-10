@@ -22,6 +22,17 @@ function Companies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [companyContacts, setCompanyContacts] = useState<any[]>([]);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    id: 0,
+    companyName: "",
+    phone: "",
+    email: "",
+    address: "",
+  });
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -100,6 +111,20 @@ function Companies() {
     }
   };
 
+  const fetchContactsForCompany = async (companyId: number) => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/companies/by-company/${companyId}`
+      );
+      if (!res.ok) throw new Error("Failed to load contacts");
+      const data = await res.json();
+      setCompanyContacts(data);
+    } catch (e: any) {
+      console.error(e);
+      setCompanyContacts([]);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Header />
@@ -153,6 +178,9 @@ function Companies() {
                   Create Datetime
                 </th>
                 <th className="px-6 py-3 font-medium text-gray-900 dark:text-white">
+                  View
+                </th>
+                <th className="px-6 py-3 font-medium text-gray-900 dark:text-white">
                   Actions
                 </th>
               </tr>
@@ -193,8 +221,58 @@ function Companies() {
                     {company.createdAt}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <button className="text-blue-600 dark:text-blue-400 hover:underline">
+                    <button
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                      onClick={async () => {
+                        setSelectedCompany(company);
+                        await fetchContactsForCompany(company.id);
+                        setIsContactModalOpen(true);
+                      }}
+                    >
                       View Contacts
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      className="text-blue-600 dark:text-blue-400 hover:underline mr-3"
+                      onClick={() => {
+                        setEditFormData({
+                          id: company.id,
+                          companyName: company.name,
+                          phone: company.phone || "",
+                          email: company.email || "",
+                          address: company.address || "",
+                        });
+                        setIsEditModalOpen(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="text-red-600 dark:text-red-400 hover:underline"
+                      onClick={async () => {
+                        if (
+                          window.confirm(
+                            `Are you sure you want to delete ${company.name}?`
+                          )
+                        ) {
+                          try {
+                            const res = await fetch(
+                              `${API_BASE}/api/companies/${company.id}`,
+                              {
+                                method: "DELETE",
+                              }
+                            );
+                            if (!res.ok)
+                              throw new Error("Failed to delete company");
+                            await fetchCompanies();
+                          } catch (e: any) {
+                            alert(e.message);
+                          }
+                        }
+                      }}
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -312,8 +390,189 @@ function Companies() {
             </div>
           </div>
         )}
-      </main>
 
+        {/* View Contacts Modal */}
+        {isContactModalOpen && selectedCompany && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl">
+              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 p-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Contacts of {selectedCompany.name}
+                </h2>
+                <button
+                  onClick={() => setIsContactModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-4 overflow-x-auto">
+                {companyContacts.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No contacts found.
+                  </p>
+                ) : (
+                  <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
+                    <thead className="bg-gray-100 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-2">Name</th>
+                        <th className="px-4 py-2">Email</th>
+                        <th className="px-4 py-2">Phone</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {companyContacts.map((contact) => (
+                        <tr
+                          key={contact.id}
+                          className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                        >
+                          <td className="px-4 py-2">
+                            {contact.firstName} {contact.lastName}
+                          </td>
+                          <td className="px-4 py-2">{contact.email || "—"}</td>
+                          <td className="px-4 py-2">{contact.phone || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Company Modal */}
+        {isEditModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
+              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 p-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Edit Company
+                </h2>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const res = await fetch(
+                      `${API_BASE}/api/companies/${editFormData.id}`,
+                      {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          companyName: editFormData.companyName,
+                          phone: editFormData.phone,
+                          email: editFormData.email,
+                          address: editFormData.address,
+                        }),
+                      }
+                    );
+                    if (!res.ok) throw new Error("Failed to update company");
+                    await fetchCompanies();
+                    setIsEditModalOpen(false);
+                  } catch (e: any) {
+                    alert(e.message);
+                  }
+                }}
+                className="p-4 space-y-4"
+              >
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Company Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.companyName}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          companyName: e.target.value,
+                        })
+                      }
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={editFormData.phone}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            phone: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={editFormData.email}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            email: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.address}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          address: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  >
+                    Update
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </main>
       <Footer />
     </div>
   );
