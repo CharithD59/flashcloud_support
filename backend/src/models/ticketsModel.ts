@@ -25,14 +25,23 @@ export type PaginatedTickets = {
 
 export async function getTickets(
   page = 1,
-  pageSize = 6
+  pageSize = 6,
+  search = ""
 ): Promise<PaginatedTickets> {
   const limit = pageSize;
   const offset = (page - 1) * pageSize;
 
+  // Search condition
+  const searchCondition = search
+    ? `WHERE subject LIKE ? OR author LIKE ? OR company LIKE ?`
+    : "";
+
+  const searchValue = `%${search}%`;
+
   // Total count
   const [countRows] = await pool.query<RowDataPacket[]>(
-    `SELECT COUNT(*) AS total FROM tickets`
+    `SELECT COUNT(*) AS total FROM tickets ${searchCondition}`,
+    search ? [searchValue, searchValue, searchValue] : []
   );
   const total = Number((countRows[0] as any)?.total ?? 0);
 
@@ -55,10 +64,13 @@ export async function getTickets(
       -- initial from author's first non-empty char
       UPPER(LEFT(TRIM(author), 1)) AS initial
     FROM tickets
+    ${searchCondition}
     ORDER BY id DESC
     LIMIT ? OFFSET ?;
     `,
-    [limit, offset]
+    search
+      ? [searchValue, searchValue, searchValue, limit, offset]
+      : [limit, offset]
   );
 
   const items = rows as unknown as Ticket[];
