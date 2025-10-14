@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Avatar, Badge, Pagination } from "flowbite-react";
+import { Badge, Pagination } from "flowbite-react";
 import { User, Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSearch } from "../../context/SearchContext";
@@ -29,6 +29,26 @@ type PaginatedTickets = {
 const ITEMS_PER_PAGE = 6;
 const API_BASE = "http://localhost:5000";
 
+const avatarColors = [
+  "#F59E0B", // amber
+  "#3B82F6", // blue
+  "#10B981", // green
+  "#EF4444", // red
+  "#8B5CF6", // violet
+  "#EC4899", // pink
+  "#14B8A6", // teal
+  "#6366F1", // indigo
+  "#84CC16", // lime
+  "#F97316", // orange
+];
+
+function getColorForInitial(initial: string): string {
+  if (!initial) return "#9CA3AF"; // default gray
+  const charCode = initial.toUpperCase().charCodeAt(0);
+  const index = charCode % avatarColors.length;
+  return avatarColors[index];
+}
+
 const Tickets: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [items, setItems] = useState<Ticket[]>([]);
@@ -54,7 +74,18 @@ const Tickets: React.FC = () => {
 
         const data: PaginatedTickets = await res.json();
         if (!cancelled) {
-          setItems(data.items || []);
+          const processed = (data.items || []).map((ticket) => {
+            const initial =
+              ticket.author && ticket.author.trim().length > 0
+                ? ticket.author.trim().charAt(0).toUpperCase()
+                : "?";
+
+            const bgColor = getColorForInitial(initial);
+
+            return { ...ticket, initial, bgColor };
+          });
+
+          setItems(processed);
           setTotalPages(data.totalPages || 1);
         }
       } catch (e: any) {
@@ -92,8 +123,14 @@ const Tickets: React.FC = () => {
             className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 border border-gray-200 dark:border-gray-700 transition hover:shadow-lg"
           >
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-xl font-semibold text-white">
+              {/* <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-xl font-semibold text-white">
                 <Avatar rounded placeholderInitials={ticket.initial} />
+              </div> */}
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-semibold text-white shadow"
+                style={{ backgroundColor: (ticket as any).bgColor }}
+              >
+                {ticket.initial}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">

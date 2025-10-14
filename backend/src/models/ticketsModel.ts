@@ -12,7 +12,6 @@ export type Ticket = {
   state: string;
   daysAgo: number;
   overdueBy: number;
-  initial: string;
 };
 
 export type PaginatedTickets = {
