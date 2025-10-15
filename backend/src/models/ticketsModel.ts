@@ -12,6 +12,8 @@ export type Ticket = {
   state: string;
   daysAgo: number;
   overdueBy: number;
+  initial?: string;
+  email?: string;
 };
 
 export type PaginatedTickets = {
@@ -80,4 +82,31 @@ export async function getTickets(
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
   };
+}
+
+export async function getTicketById(id: number): Promise<Ticket | null> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+    SELECT
+      id,
+      subject,
+      status,
+      author,
+      company,
+      priority,
+      assignee,
+      state,
+      email,
+      GREATEST(TIMESTAMPDIFF(DAY, created_at, NOW()), 0) AS daysAgo,
+      GREATEST(TIMESTAMPDIFF(DAY, due_at, NOW()), 0) AS overdueBy,
+      UPPER(LEFT(TRIM(author), 1)) AS initial
+    FROM tickets
+    WHERE id = ?
+    LIMIT 1;
+    `,
+    [id]
+  );
+
+  if (rows.length === 0) return null;
+  return rows[0] as Ticket;
 }

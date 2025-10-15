@@ -14,13 +14,20 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "imap-simple": "^5.1.0",
+    "mailparser": "^3.7.5",
     "multer": "^2.0.2",
-    "mysql2": "^3.15.1"
+    "mysql2": "^3.15.1",
+    "nodemailer": "^7.0.9"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/imap": "^0.8.42",
+    "@types/imap-simple": "^4.2.10",
+    "@types/mailparser": "^3.4.6",
     "@types/multer": "^2.0.0",
-    "@types/node": "^24.7.0"
+    "@types/node": "^24.7.0",
+    "@types/nodemailer": "^7.0.2"
   }
 }

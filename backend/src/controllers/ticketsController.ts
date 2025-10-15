@@ -1,5 +1,8 @@
 import type { Request, Response } from "express";
-import { getTickets } from "../models/ticketsModel";
+import { sendEmail } from "../services/emailService";
+import { getTickets, getTicketById } from "../models/ticketsModel";
+//import { fetchIncomingEmails } from "../services/emailReceiver";
+import { fetchOneUnreadEmail } from "../services/emailReceiver";
 
 export async function list(req: Request, res: Response) {
   try {
@@ -17,5 +20,53 @@ export async function list(req: Request, res: Response) {
   } catch (err) {
     console.error("Error fetching tickets:", err);
     res.status(500).json({ error: "Failed to fetch tickets" });
+  }
+}
+
+export async function sendTicketEmail(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const { subject, message } = req.body;
+
+    const ticket = await getTicketById(Number(id));
+    if (!ticket) return res.status(404).json({ error: "Ticket not found" });
+
+    if (!ticket.email)
+      return res.status(400).json({ error: "Ticket has no associated email" });
+
+    await sendEmail(ticket.email, subject, message);
+
+    res.status(200).json({ message: "Email sent successfully" });
+  } catch (err) {
+    console.error("Error sending email:", err);
+    res.status(500).json({ error: "Failed to send email" });
+  }
+}
+
+//Get all emails in the inbox
+
+/*export async function getReceivedEmails(req: Request, res: Response) {
+  try {
+    const emails = await fetchIncomingEmails();
+    res.status(200).json(emails);
+  } catch (err) {
+    console.error("Error fetching incoming emails:", err);
+    res.status(500).json({ error: "Failed to fetch incoming emails" });
+  }
+}*/
+
+//Get one unread email in the inbox
+export async function getReceivedEmail(req: Request, res: Response) {
+  try {
+    const email = await fetchOneUnreadEmail();
+
+    if (!email) {
+      return res.status(404).json({ message: "No unread emails found" });
+    }
+
+    res.status(200).json(email);
+  } catch (err) {
+    console.error("Error fetching incoming email:", err);
+    res.status(500).json({ error: "Failed to fetch incoming email" });
   }
 }
