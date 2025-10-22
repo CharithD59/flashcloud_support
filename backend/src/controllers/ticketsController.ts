@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import { sendEmail } from "../services/emailService";
+import {
+  sendEmail,
+  replyToEmail,
+  forwardEmail,
+} from "../services/emailService";
 import { getTickets, getTicketById } from "../models/ticketsModel";
 //import { fetchIncomingEmails } from "../services/emailReceiver";
 import { fetchOneUnreadEmail } from "../services/emailReceiver";
@@ -68,5 +72,31 @@ export async function getReceivedEmail(req: Request, res: Response) {
   } catch (err) {
     console.error("Error fetching incoming email:", err);
     res.status(500).json({ error: "Failed to fetch incoming email" });
+  }
+}
+
+// Replying to an existing email
+
+export async function replyEmail(req: Request, res: Response) {
+  try {
+    const { to, subject, replyMessage, inReplyToId } = req.body;
+    const info = await replyToEmail(to, subject, replyMessage, inReplyToId);
+    res.status(200).json({ message: "Reply sent successfully", info });
+  } catch (err) {
+    console.error("Error replying to email:", err);
+    res.status(500).json({ error: "Failed to reply to email" });
+  }
+}
+
+// Forwarding an existing email
+
+export async function forwardEmailController(req: Request, res: Response) {
+  try {
+    const { to, subject, originalBody, forwardMessage } = req.body;
+    const info = await forwardEmail(to, subject, originalBody, forwardMessage);
+    res.status(200).json({ message: "Email forwarded successfully", info });
+  } catch (err) {
+    console.error("Error forwarding email:", err);
+    res.status(500).json({ error: "Failed to forward email" });
   }
 }
