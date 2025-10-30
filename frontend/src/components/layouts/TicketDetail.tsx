@@ -24,7 +24,7 @@ interface Email {
   cc: string;
   subject: string;
   date: string;
-  body: React.ReactNode;
+  body: string;
 }
 
 interface TicketData {
@@ -98,21 +98,7 @@ const TicketDetail: React.FC = () => {
         cc: "akila@iphonik.com, machiavarathnayake@sampath.lk, nuwanj@sampath.lk, rishui.hettiarachchi@dialog.lk",
         subject: "Report in Accuracy in Iphonik system",
         date: "Mon, 3 Jun 2024 at 11:50 AM",
-        body: (
-          <div>
-            <p>
-              Dear Support Team,
-              <br />
-              There seems to be an inaccuracy in the Iphonik system report.
-              Please investigate.
-            </p>
-            <p>
-              Regards,
-              <br />
-              Charana Ranasinghe
-            </p>
-          </div>
-        ),
+        body: "<div><p>Dear Support Team,<br/>There seems to be an inaccuracy in the Iphonik system report. Please investigate.</p><p>Regards,<br/>Charana Ranasinghe</p></div>",
       },
     ],
   };
@@ -122,6 +108,7 @@ const TicketDetail: React.FC = () => {
   const [priority, setPriority] = useState(ticketData.priority);
   const [group, setGroup] = useState(ticketData.group);
   const [assignee, setAssignee] = useState(ticketData.assignee);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   useEffect(() => {
     const fetchUnreadEmails = async () => {
@@ -158,7 +145,7 @@ const TicketDetail: React.FC = () => {
         }
 
         // Format single or multiple email responses
-        const formattedEmails: Email[] = Array.isArray(data)
+        /*const formattedEmails: Email[] = Array.isArray(data)
           ? data.map((email) => ({
               from: email.from || "Unknown",
               to: email.to || "",
@@ -176,7 +163,27 @@ const TicketDetail: React.FC = () => {
                 date: data.date || new Date().toLocaleString(),
                 body: data.html || data.text || "<p>(No message content)</p>",
               },
-            ];
+            ];*/
+
+        // Replace data mapping
+        const formattedEmails: Email[] = Array.isArray(data)
+          ? data.map((email: any) => ({
+              from: email.sender || "Unknown",
+              to: email.recipient || "",
+              cc: email.cc || "",
+              subject: email.subject || "(No Subject)",
+              date: email.date_received
+                ? new Date(email.date_received).toLocaleString()
+                : new Date().toLocaleString(),
+              body: email.body || "<p>(No message content)</p>",
+              attachments:
+                email.attachments && email.attachments.length > 0
+                  ? email.attachments
+                      .split(",")
+                      .map((file: string) => file.trim())
+                  : [],
+            }))
+          : [];
 
         setEmails(formattedEmails);
         setError(null);
@@ -200,22 +207,120 @@ const TicketDetail: React.FC = () => {
   };
 
   // Handle reply submission
-  const handleReplySubmit = (e: React.FormEvent) => {
+  const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Reply submitted:", replyContent);
-    console.log("CC recipients:", ccRecipients);
-    setReplyContent("");
-    setIsReplying(false);
+
+    const selectedCc = ccOptions
+      .filter((r) => ccRecipients[r.key])
+      .map((r) => r.label);
+
+    const originalEmail = emails[0];
+
+    const quotedOriginal = `
+      <br><br>
+      On ${originalEmail?.date || "a previous date"}, ${
+      originalEmail?.from || "someone"
+    } wrote:
+        <blockquote style="border-left:2px solid #ccc; margin:0; padding-left:10px;">
+          ${originalEmail?.body || ""}
+        </blockquote>
+      `;
+
+    const fullReply = `${replyContent}${quotedOriginal}`;
+
+    const formData = new FormData();
+    formData.append("to", originalEmail.from);
+    formData.append("subject", originalEmail.subject);
+    formData.append("replyMessage", fullReply);
+    if (ticketData.id) {
+      formData.append("inReplyToId", ticketData.id);
+    }
+    selectedCc.forEach((cc) => formData.append("cc", cc));
+    attachments.forEach((file) => formData.append("attachments", file));
+
+    try {
+      const res = await fetch(
+        "http://localhost:5000/api/tickets/emails/reply",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!res.ok) {
+        console.error("Reply failed:", res.statusText);
+        alert("Failed to send reply.");
+        return;
+      }
+
+      const data = await res.json();
+      console.log("Reply sent:", data);
+
+      setReplyContent("");
+      setAttachments([]);
+      setIsReplying(false);
+      alert("Reply sent successfully!");
+    } catch (err) {
+      console.error("Error sending reply:", err);
+      alert("An error occurred while sending the reply.");
+    }
   };
 
   // Handle forward submission
-  const handleForwardSubmit = (e: React.FormEvent) => {
+  const handleForwardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Forward submitted:", forwardContent);
-    console.log("Forward recipients:", forwardRecipients);
-    setForwardContent("");
-    setForwardRecipients({ to: "", cc: "" });
-    setIsForwarding(false);
+
+    if (!emails || emails.length === 0) {
+      alert("No email selected to forward.");
+      return;
+    }
+
+    const originalEmail = emails[0];
+
+    // Build form data to include attachments
+    const formData = new FormData();
+    formData.append("to", forwardRecipients.to);
+    formData.append("subject", originalEmail.subject);
+    formData.append("originalBody", originalEmail.body);
+    formData.append("forwardMessage", forwardContent);
+    formData.append("originalFrom", originalEmail.from);
+    formData.append("originalDate", originalEmail.date);
+    formData.append("originalTo", originalEmail.to);
+
+    // Append attachments (if any selected)
+    if (attachments && attachments.length > 0) {
+      for (let i = 0; i < attachments.length; i++) {
+        formData.append("attachments", attachments[i]);
+      }
+    }
+
+    try {
+      const res = await fetch(
+        "http://localhost:5000/api/tickets/emails/forward",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!res.ok) {
+        console.error("Forward failed:", res.statusText);
+        alert("Failed to forward email.");
+        return;
+      }
+
+      const data = await res.json();
+      console.log("Email forwarded:", data);
+      alert("Email forwarded successfully!");
+
+      // Reset states
+      setForwardContent("");
+      setAttachments([]);
+      setIsForwarding(false);
+    } catch (err) {
+      console.error("Error forwarding email:", err);
+      alert("An error occurred while forwarding the email.");
+    }
   };
 
   // Toggle reply form and ensure forward form is closed
@@ -293,10 +398,8 @@ const TicketDetail: React.FC = () => {
                         From
                       </h4>
                       <p className="text-base font-semibold text-gray-900 dark:text-white">
-                        iPhonik Support
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        support@iphonik.com
+                        {emails[0]?.to?.split(",")[0]?.trim() ||
+                          "iPhonik Support"}
                       </p>
                     </div>
                     <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
@@ -304,7 +407,7 @@ const TicketDetail: React.FC = () => {
                         To
                       </h4>
                       <p className="text-base font-semibold text-gray-900 dark:text-white">
-                        charanaranasinghe@sampath.lk
+                        {emails[0]?.from || "No recipient"}
                       </p>
                     </div>
                   </div>
@@ -356,13 +459,50 @@ const TicketDetail: React.FC = () => {
 
                 {/* Actions */}
                 <div className="flex justify-between items-center">
-                  <button
+                  {/*<button
                     type="button"
                     className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
                   >
                     <FaPaperclip className="mr-2" />
                     Attach File
-                  </button>
+                  </button>*/}
+
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600">
+                      <FaPaperclip className="mr-2" />
+                      Attach File
+                      <input
+                        type="file"
+                        multiple
+                        onChange={(e) =>
+                          setAttachments(
+                            e.currentTarget.files
+                              ? Array.from(e.currentTarget.files)
+                              : []
+                          )
+                        }
+                        className="hidden"
+                      />
+                    </label>
+
+                    {attachments.length > 0 && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        {attachments.length} file(s) selected
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Show attached file names */}
+                  {attachments.length > 0 && (
+                    <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                      <p>Attached files:</p>
+                      <ul className="list-disc pl-5">
+                        {attachments.map((file, index) => (
+                          <li key={index}>{file.name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   <div className="space-x-2">
                     <button
@@ -395,10 +535,7 @@ const TicketDetail: React.FC = () => {
                       From
                     </h4>
                     <p className="text-base font-semibold text-gray-900 dark:text-white">
-                      iPhonik Support
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      support@iphonik.com
+                      {emails[0]?.from || "No recipient"}
                     </p>
                   </div>
                 </div>
@@ -453,25 +590,25 @@ const TicketDetail: React.FC = () => {
                 </div>
 
                 {/* Original Message */}
-                <div className="mb-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
+                {/*<div className="mb-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
                   <h4 className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-2">
                     Original Message
                   </h4>
                   <div className="text-xs text-gray-700 dark:text-gray-300">
                     <p>
-                      <strong>From:</strong> {ticketData.emails[0]?.from}
+                      <strong>From:</strong> {emails[0]?.from}
                     </p>
                     <p>
-                      <strong>Date:</strong> {ticketData.emails[0]?.date}
+                      <strong>Date:</strong> {emails[0]?.date}
                     </p>
                     <p>
-                      <strong>Subject:</strong> {ticketData.emails[0]?.subject}
+                      <strong>Subject:</strong> {emails[0]?.subject}
                     </p>
                     <div className="mt-2 border-t border-gray-300 dark:border-gray-600 pt-2">
-                      {ticketData.emails[0]?.body}
+                      {emails[0]?.body}
                     </div>
                   </div>
-                </div>
+                </div>*/}
 
                 {/* Message */}
                 <div className="mb-4">
@@ -491,10 +628,52 @@ const TicketDetail: React.FC = () => {
                   />
                 </div>
 
+                {/* Attachments Preview */}
+                {attachments.length > 0 && (
+                  <div className="mb-4 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Attached Files:
+                    </h4>
+                    <ul className="list-disc list-inside text-sm text-gray-800 dark:text-gray-200">
+                      {attachments.map((file, idx) => (
+                        <li
+                          key={idx}
+                          className="flex justify-between items-center"
+                        >
+                          <span>{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAttachments(
+                                attachments.filter((_, i) => i !== idx)
+                              )
+                            }
+                            className="text-red-500 hover:text-red-700 text-xs"
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex justify-between items-center">
+                  <input
+                    type="file"
+                    id="forwardAttachmentInput"
+                    multiple
+                    className="hidden"
+                    onChange={(e) =>
+                      setAttachments(Array.from(e.target.files || []))
+                    }
+                  />
                   <button
                     type="button"
+                    onClick={() =>
+                      document.getElementById("forwardAttachmentInput")?.click()
+                    }
                     className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
                   >
                     <FaPaperclip className="mr-2" />

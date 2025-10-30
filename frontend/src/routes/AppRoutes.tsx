@@ -10,7 +10,6 @@ import Tickets from "../components/layouts/Tickets";
 import TicketDetail from "../components/layouts/TicketDetail";
 import Companies from "../components/layouts/Companies";
 import Contacts from "../components/layouts/Contacts";
-import SignupPage from "../components/auth/SignupPage";
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <>
@@ -24,7 +23,6 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
       <Route
         path="/dashboard"
         element={
@@ -62,14 +60,6 @@ const AppRoutes: React.FC = () => {
         element={
           <Layout>
             <Contacts />
-          </Layout>
-        }
-      />
-      <Route
-        path="/signup"
-        element={
-          <Layout>
-            <SignupPage />
           </Layout>
         }
       />

@@ -62,7 +62,8 @@ export async function replyToEmail(
   to: string,
   originalSubject: string,
   replyMessage: string,
-  inReplyToId?: string
+  inReplyToId?: string,
+  attachments: any[] = []
 ) {
   try {
     const subject = originalSubject.startsWith("Re:")
@@ -77,6 +78,7 @@ export async function replyToEmail(
       html: `<p>${replyMessage}</p>`,
       inReplyTo: inReplyToId, // Optional (helps email clients thread replies)
       references: inReplyToId ? [inReplyToId] : [],
+      attachments,
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -93,7 +95,11 @@ export async function forwardEmail(
   to: string,
   originalSubject: string,
   originalBody: string,
-  forwardMessage?: string
+  forwardMessage?: string,
+  attachments: any[] = [],
+  originalFrom?: string,
+  originalDate?: string,
+  originalTo?: string
 ) {
   try {
     const subject = originalSubject.startsWith("Fwd:")
@@ -103,6 +109,11 @@ export async function forwardEmail(
     const combinedMessage = `
       <p>${forwardMessage || "Forwarded message:"}</p>
       <hr/>
+      <p>----------- Forwarded message -----------</p>
+      <p><strong>From:</strong> ${originalFrom}</p>
+      <p><strong>Date:</strong> ${originalDate}</p>
+      <p><strong>Subject:</strong> ${originalSubject}</p>
+      <p><strong>To:</strong> ${originalTo}</p>
       <blockquote>${originalBody}</blockquote>
     `;
 
@@ -111,6 +122,7 @@ export async function forwardEmail(
       to,
       subject,
       html: combinedMessage,
+      attachments,
     };
 
     const info = await transporter.sendMail(mailOptions);

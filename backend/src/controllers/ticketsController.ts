@@ -6,7 +6,8 @@ import {
 } from "../services/emailService";
 import { getTickets, getTicketById } from "../models/ticketsModel";
 //import { fetchIncomingEmails } from "../services/emailReceiver";
-import { fetchOneUnreadEmail } from "../services/emailReceiver";
+import { fetchAndSaveUnreadEmail } from "../services/emailReceiver";
+import { pool } from "../config/db";
 
 export async function list(req: Request, res: Response) {
   try {
@@ -60,7 +61,7 @@ export async function sendTicketEmail(req: Request, res: Response) {
 }*/
 
 //Get one unread email in the inbox
-export async function getReceivedEmail(req: Request, res: Response) {
+/*export async function getReceivedEmail(req: Request, res: Response) {
   try {
     const email = await fetchOneUnreadEmail();
 
@@ -73,6 +74,21 @@ export async function getReceivedEmail(req: Request, res: Response) {
     console.error("Error fetching incoming email:", err);
     res.status(500).json({ error: "Failed to fetch incoming email" });
   }
+}*/
+
+export async function getReceivedEmail(req: Request, res: Response) {
+  try {
+    await fetchAndSaveUnreadEmail();
+
+    const [rows] = await pool.query(
+      "SELECT * FROM received_emails ORDER BY date_received DESC"
+    );
+
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error("Error fetching incoming emails:", err);
+    res.status(500).json({ error: "Failed to fetch incoming emails" });
+  }
 }
 
 // Replying to an existing email
@@ -80,7 +96,23 @@ export async function getReceivedEmail(req: Request, res: Response) {
 export async function replyEmail(req: Request, res: Response) {
   try {
     const { to, subject, replyMessage, inReplyToId } = req.body;
-    const info = await replyToEmail(to, subject, replyMessage, inReplyToId);
+
+    // Handle attachments if any
+    const attachments = (
+      (req as Request & { files?: { originalname: string; path: string }[] })
+        .files ?? []
+    ).map((file) => ({
+      filename: file.originalname,
+      path: file.path,
+    }));
+
+    const info = await replyToEmail(
+      to,
+      subject,
+      replyMessage,
+      inReplyToId,
+      attachments
+    );
     res.status(200).json({ message: "Reply sent successfully", info });
   } catch (err) {
     console.error("Error replying to email:", err);
@@ -92,8 +124,34 @@ export async function replyEmail(req: Request, res: Response) {
 
 export async function forwardEmailController(req: Request, res: Response) {
   try {
-    const { to, subject, originalBody, forwardMessage } = req.body;
-    const info = await forwardEmail(to, subject, originalBody, forwardMessage);
+    const {
+      to,
+      subject,
+      originalBody,
+      forwardMessage,
+      originalFrom,
+      originalDate,
+      originalTo,
+    } = req.body;
+    const files =
+      (req as Request & { files?: { originalname: string; path: string }[] })
+        .files ?? [];
+
+    // Convert uploaded files into nodemailer attachment objects
+    const attachments = files.map((file) => ({
+      filename: file.originalname,
+      path: file.path,
+    }));
+
+    const info = await forwardEmail(
+      to,
+      subject,
+      originalBody,
+      forwardMessage,
+      attachments,
+      originalFrom,
+      originalDate
+    );
     res.status(200).json({ message: "Email forwarded successfully", info });
   } catch (err) {
     console.error("Error forwarding email:", err);

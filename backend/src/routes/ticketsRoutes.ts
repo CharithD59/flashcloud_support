@@ -6,6 +6,9 @@ import {
   replyEmail,
   forwardEmailController,
 } from "../controllers/ticketsController";
+import multer from "multer";
+
+const upload = multer({ dest: "uploads/" });
 
 const router = Router();
 
@@ -15,8 +18,12 @@ router.post("/:id/send-email", sendTicketEmail);
 
 router.get("/emails/inbox", getReceivedEmail);
 
-router.post("/emails/reply", replyEmail);
+router.post("/emails/reply", upload.array("attachments"), replyEmail);
 
-router.post("/emails/forward", forwardEmailController);
+router.post(
+  "/emails/forward",
+  upload.array("attachments"),
+  forwardEmailController
+);
 
 export default router;
