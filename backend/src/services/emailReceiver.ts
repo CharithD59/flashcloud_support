@@ -66,7 +66,7 @@ const config = {
   }
 }*/
 
-export async function fetchAndSaveUnreadEmail() {
+/*export async function fetchAndSaveUnreadEmail() {
   try {
     const connection = await imaps.connect(config);
     await connection.openBox("INBOX");
@@ -127,6 +127,89 @@ export async function fetchAndSaveUnreadEmail() {
     );
 
     return emailData;
+  } catch (err) {
+    console.error("Error fetching/saving unread email:", err);
+    return null;
+  }
+}*/
+
+// Fetch unread emails received since yesterday
+export async function fetchAndSaveUnreadEmail() {
+  try {
+    const connection = await imaps.connect(config);
+    await connection.openBox("INBOX");
+
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    const formattedDate = date
+      .toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+      .replace(/ /g, "-"); // ex: "25-Oct-2025"
+
+    const searchCriteria = ["UNSEEN", "SINCE", formattedDate];
+    const fetchOptions = { bodies: [""], markSeen: true };
+
+    const messages = await connection.search(searchCriteria, fetchOptions);
+
+    if (messages.length === 0) {
+      await connection.end();
+      return null;
+    }
+
+    for (const msg of messages) {
+      const all = msg.parts.find((part: any) => part.which === "");
+      const parsed = await simpleParser(all?.body || "");
+
+      await connection.end();
+
+      const emailData = {
+        from: parsed.from?.text || "",
+        to: Array.isArray(parsed.to)
+          ? parsed.to.map((t) => t.text).join(", ")
+          : parsed.to?.text || "",
+        cc: Array.isArray(parsed.cc)
+          ? parsed.cc.map((c) => c.text).join(", ")
+          : parsed.cc?.text || "",
+        subject: parsed.subject || "(No Subject)",
+        body: parsed.html || parsed.textAsHtml || parsed.text || "",
+        attachments: parsed.attachments?.length
+          ? JSON.stringify(
+              parsed.attachments.map((a: any) => ({
+                filename: a.filename || null,
+                contentType: a.contentType || null,
+                size: a.size ?? null,
+              }))
+            )
+          : null,
+        date: parsed.date ? new Date(parsed.date) : new Date(),
+      };
+
+      // Save to MySQL
+      await pool.query(
+        `INSERT INTO received_emails (sender, recipient, cc, subject, body, attachments, date_received, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+
+        [
+          emailData.from,
+          emailData.to,
+          emailData.cc,
+          emailData.subject,
+          emailData.body,
+          emailData.attachments || null,
+          emailData.date,
+          "unread",
+        ]
+      );
+
+      console.log(
+        `Saved email from: ${emailData.from} | Subject: ${emailData.subject}`
+      );
+    }
+
+    await connection.end();
   } catch (err) {
     console.error("Error fetching/saving unread email:", err);
     return null;

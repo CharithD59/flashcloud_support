@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon",
+    "start": "npx tsx src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +34,9 @@
     "@types/mailparser": "^3.4.6",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.7.0",
-    "@types/nodemailer": "^7.0.2"
+    "@types/nodemailer": "^7.0.2",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
