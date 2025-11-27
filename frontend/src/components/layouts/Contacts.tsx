@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FaPlus, FaTimes, FaUserCircle, FaTrash } from "react-icons/fa";
+import { useDrawer } from "../../context/DrawerContext";
 
 type Contact = {
   id: number;
@@ -22,6 +23,8 @@ function Contacts() {
   const [error, setError] = useState<string | null>(null);
 
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const { isDrawerOpen } = useDrawer();
+  const mainMarginClass = isDrawerOpen ? "md:ml-64" : "md:ml-20";
 
   // Form state (kept as you had)
   const [formData, setFormData] = useState<{
@@ -204,7 +207,9 @@ function Contacts() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <main className="p-4 md:ml-64 h-auto pt-20 space-y-4">
+      <main
+        className={`p-4 ${mainMarginClass} h-auto pt-20 space-y-4 transition-all duration-300`}
+      >
         {/* Header with Add Contact button */}
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">

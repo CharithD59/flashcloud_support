@@ -5,8 +5,10 @@ import {
   forwardEmail,
 } from "../services/emailService";
 import { getTickets, getTicketById } from "../models/ticketsModel";
-//import { fetchIncomingEmails } from "../services/emailReceiver";
-import { fetchAndSaveUnreadEmail } from "../services/emailReceiver";
+
+import { fetchAndSaveLatestEmails } from "../services/emailReceiver";
+
+import { updateTicketById } from "../models/ticketsModel";
 import { pool } from "../config/db";
 
 export async function list(req: Request, res: Response) {
@@ -76,7 +78,7 @@ export async function sendTicketEmail(req: Request, res: Response) {
   }
 }*/
 
-export async function getReceivedEmail(req: Request, res: Response) {
+/*export async function getReceivedEmail(req: Request, res: Response) {
   try {
     await fetchAndSaveUnreadEmail();
 
@@ -89,7 +91,7 @@ export async function getReceivedEmail(req: Request, res: Response) {
     console.error("Error fetching incoming emails:", err);
     res.status(500).json({ error: "Failed to fetch incoming emails" });
   }
-}
+}*/
 
 // Replying to an existing email
 
@@ -156,5 +158,45 @@ export async function forwardEmailController(req: Request, res: Response) {
   } catch (err) {
     console.error("Error forwarding email:", err);
     res.status(500).json({ error: "Failed to forward email" });
+  }
+}
+
+//update ticket details (state, priority, group_type, assignee)
+export async function updateTicket(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const { state, priority, group_type, assignee } = req.body;
+
+    const updated = await updateTicketById(Number(id), {
+      state,
+      priority,
+      group_type,
+      assignee,
+    });
+
+    if (!updated) {
+      return res.status(400).json({ error: "No fields were updated" });
+    }
+
+    res.json({ message: "Ticket updated successfully" });
+  } catch (err) {
+    console.error("Error updating ticket:", err);
+    res.status(500).json({ error: "Failed to update ticket" });
+  }
+}
+
+//get emails from inbox
+export async function getSavedEmails(req: Request, res: Response) {
+  try {
+    await fetchAndSaveLatestEmails();
+
+    const [rows] = await pool.query(
+      "SELECT * FROM received_emails ORDER BY date_received DESC"
+    );
+
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error("Error fetching emails:", err);
+    res.status(500).json({ message: "Failed to fetch emails" });
   }
 }

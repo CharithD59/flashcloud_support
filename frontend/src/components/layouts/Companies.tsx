@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import Header from "../common/Header";
 import Footer from "../common/Footer";
 import { FaPlus, FaTimes } from "react-icons/fa";
+import { useDrawer } from "../../context/DrawerContext";
 
 type Company = {
   id: number;
@@ -18,6 +19,8 @@ const API_BASE =
   (import.meta as any)?.env?.VITE_API_URL || "http://localhost:5000";
 
 function Companies() {
+  const { isDrawerOpen } = useDrawer();
+  const mainMarginClass = isDrawerOpen ? "md:ml-64" : "md:ml-20";
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
@@ -127,9 +130,9 @@ function Companies() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Header />
-
-      <main className="p-4 md:ml-64 h-auto pt-20 space-y-4">
+      <main
+        className={`p-4 ${mainMarginClass} h-auto pt-20 space-y-4 transition-all duration-300`}
+      >
         {/* Header with Add Company button */}
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -573,7 +576,6 @@ function Companies() {
           </div>
         )}
       </main>
-      <Footer />
     </div>
   );
 }

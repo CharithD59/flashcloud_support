@@ -2,9 +2,10 @@ import { Router } from "express";
 import {
   list,
   sendTicketEmail,
-  getReceivedEmail,
+  getSavedEmails,
   replyEmail,
   forwardEmailController,
+  updateTicket,
 } from "../controllers/ticketsController";
 import multer from "multer";
 
@@ -16,7 +17,7 @@ router.get("/ticket", list);
 
 router.post("/:id/send-email", sendTicketEmail);
 
-router.get("/emails/inbox", getReceivedEmail);
+router.get("/emails/inbox", getSavedEmails);
 
 router.post("/emails/reply", upload.array("attachments"), replyEmail);
 
@@ -25,5 +26,7 @@ router.post(
   upload.array("attachments"),
   forwardEmailController
 );
+
+router.put("/:id", updateTicket);
 
 export default router;

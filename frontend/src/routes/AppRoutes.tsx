@@ -10,6 +10,8 @@ import Tickets from "../components/layouts/Tickets";
 import TicketDetail from "../components/layouts/TicketDetail";
 import Companies from "../components/layouts/Companies";
 import Contacts from "../components/layouts/Contacts";
+import RegisterUser from "../components/layouts/RegisterUser";
+import CreateUserRole from "../components/layouts/CreateUserRole";
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <>
@@ -60,6 +62,22 @@ const AppRoutes: React.FC = () => {
         element={
           <Layout>
             <Contacts />
+          </Layout>
+        }
+      />
+      <Route
+        path="/create-user"
+        element={
+          <Layout>
+            <RegisterUser />
+          </Layout>
+        }
+      />
+      <Route
+        path="/create-role"
+        element={
+          <Layout>
+            <CreateUserRole />
           </Layout>
         }
       />

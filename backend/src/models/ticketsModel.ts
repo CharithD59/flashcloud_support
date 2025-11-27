@@ -8,7 +8,7 @@ export type Ticket = {
   author: string;
   company: string;
   priority: string;
-  assignee: string;
+  group_type: string;
   state: string;
   daysAgo: number;
   overdueBy: number;
@@ -56,7 +56,7 @@ export async function getTickets(
       author,
       company,
       priority,
-      assignee,
+      group_type,
       state,
       -- days since created
       GREATEST(TIMESTAMPDIFF(DAY, created_at, NOW()), 0) AS daysAgo,
@@ -94,7 +94,7 @@ export async function getTicketById(id: number): Promise<Ticket | null> {
       author,
       company,
       priority,
-      assignee,
+      group_type,
       state,
       email,
       GREATEST(TIMESTAMPDIFF(DAY, created_at, NOW()), 0) AS daysAgo,
@@ -109,4 +109,45 @@ export async function getTicketById(id: number): Promise<Ticket | null> {
 
   if (rows.length === 0) return null;
   return rows[0] as Ticket;
+}
+
+export async function updateTicketById(
+  id: number,
+  updates: {
+    state?: string;
+    priority?: string;
+    group_type?: string;
+    assignee?: string;
+  }
+) {
+  const fields = [];
+  const values: any[] = [];
+
+  if (updates.state !== undefined) {
+    fields.push("state = ?");
+    values.push(updates.state);
+  }
+  if (updates.priority !== undefined) {
+    fields.push("priority = ?");
+    values.push(updates.priority);
+  }
+  if (updates.group_type !== undefined) {
+    fields.push("group_type = ?");
+    values.push(updates.group_type);
+  }
+  if (updates.assignee !== undefined) {
+    fields.push("assignee = ?");
+    values.push(updates.assignee);
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id);
+
+  await pool.query(
+    `UPDATE tickets SET ${fields.join(", ")} WHERE id = ?`,
+    values
+  );
+
+  return true;
 }

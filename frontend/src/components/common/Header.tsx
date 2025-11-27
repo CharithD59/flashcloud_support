@@ -3,7 +3,29 @@ import FlashLogo from "../../assets/logo.png";
 import { Link } from "react-router-dom";
 import React from "react";
 import { useSearch } from "../../context/SearchContext";
+import { useDrawer } from "../../context/DrawerContext";
 import "flowbite";
+import { useNavigate } from "react-router-dom";
+import { Dropdown } from "flowbite";
+import "flowbite/dist/flowbite.min.js";
+//import { FaUserPlus, FaUserCog } from "react-icons/fa";
+//import { Button } from "flowbite-react";
+
+const Bars3Icon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    aria-hidden="true"
+    {...props}
+    fill="currentColor"
+    viewBox="0 0 20 20"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      fillRule="evenodd"
+      d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+      clipRule="evenodd"
+    ></path>
+  </svg>
+);
 
 const Header: React.FC = () => {
   const { searchTerm, setSearchTerm } = useSearch();
@@ -12,7 +34,33 @@ const Header: React.FC = () => {
     return localStorage.getItem("theme") === "dark";
   });
 
+  const [showAdminDropdown, setShowAdminDropdown] = useState(false);
+
+  //const [collapsed, setCollapsed] = useState(false);
+  const { isDrawerOpen, setIsDrawerOpen } = useDrawer();
+
+  const [showReports, setShowReports] = useState(false);
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  const initials = `${user?.fname?.charAt(0) || ""}${
+    user?.lname?.charAt(0) || ""
+  }`.toUpperCase();
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/");
+  };
+
   useEffect(() => {
+    new Dropdown(
+      document.getElementById("dropdown-menu"),
+      document.getElementById("user-menu-button")
+    );
+
     if (darkMode) {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
@@ -31,7 +79,7 @@ const Header: React.FC = () => {
       <nav className="bg-white border-b border-gray-200 px-4 py-2.5 dark:bg-gray-800 dark:border-gray-700 fixed left-0 right-0 top-0 z-50">
         <div className="flex flex-wrap justify-between items-center">
           <div className="flex justify-start items-center">
-            <button
+            {/*<button
               data-drawer-target="drawer-navigation"
               data-drawer-toggle="drawer-navigation"
               aria-controls="drawer-navigation"
@@ -64,12 +112,30 @@ const Header: React.FC = () => {
                 ></path>
               </svg>
               <span className="sr-only">Toggle sidebar</span>
+            </button>*/}
+
+            <button
+              onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+              className="
+                absolute 
+                top-4 left-1 
+                z-50  
+                p-2
+                hover:scale-105 transition
+              "
+            >
+              <Bars3Icon className="w-6 h-6 text-gray-700 dark:text-gray-300" />
             </button>
+
             <a
               href="https://flowbite.com"
               className="flex items-center justify-between mr-4"
             >
-              <img src={FlashLogo} className="mr-3 h-12" alt="Flowbite Logo" />
+              <img
+                src={FlashLogo}
+                className="mr-3 h-12 ml-7"
+                alt="Flowbite Logo"
+              />
             </a>
             <form action="#" method="GET" className="hidden md:block md:pl-2">
               <label htmlFor="topbar-search" className="sr-only">
@@ -217,37 +283,43 @@ const Header: React.FC = () => {
               type="button"
               className="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
               id="user-menu-button"
-              aria-expanded="false"
-              data-dropdown-toggle="dropdown"
+              data-dropdown-toggle="dropdown-menu"
             >
               <span className="sr-only">Open user menu</span>
-              <img
+              {/*<img
                 className="w-8 h-8 rounded-full"
                 src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/michael-gough.png"
                 alt="user photo"
-              />
+              />*/}
+              <div
+                className="w-8 h-8 flex items-center justify-center 
+                  bg-indigo-600 text-white rounded-full 
+                  font-semibold text-sm"
+              >
+                {initials}
+              </div>
             </button>
 
             <div
               className="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
-              id="dropdown"
+              id="dropdown-menu"
             >
               <div className="py-3 px-4">
                 <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                  Charith Dilanka
+                  {user?.fname} {user?.lname}
                 </span>
                 <span className="block text-sm text-gray-900 truncate dark:text-white">
-                  charith@iphonik.com
+                  {user?.email}
                 </span>
               </div>
               <ul
                 className="py-1 text-gray-700 dark:text-gray-300"
-                aria-labelledby="dropdown"
+                aria-labelledby="dropdown-menu"
               >
                 <li>
                   <a
-                    href="#"
-                    className="block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-400 dark:hover:text-white"
+                    onClick={() => navigate("/profile")}
+                    className="block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-400 dark:hover:text-white cursor-pointer"
                   >
                     My profile
                   </a>
@@ -255,12 +327,18 @@ const Header: React.FC = () => {
               </ul>
               <ul
                 className="py-1 text-gray-700 dark:text-gray-300"
-                aria-labelledby="dropdown"
+                aria-labelledby="dropdown-menu"
               >
                 <li>
-                  <a
+                  {/*<a
                     href="#"
                     className="block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+                  >
+                    Sign out
+                  </a>*/}
+                  <a
+                    onClick={handleLogout}
+                    className="block py-2 px-4 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-red-400 cursor-pointer"
                   >
                     Sign out
                   </a>
@@ -272,11 +350,14 @@ const Header: React.FC = () => {
       </nav>
 
       <aside
-        className="fixed top-0 left-0 z-40 w-64 h-screen pt-14 transition-transform -translate-x-full bg-white border-r border-gray-200 md:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
-        aria-label="Sidenav"
+        className={`fixed top-10 left-0 z-40 h-[calc(100vh-56px)]
+              transition-all duration-300 bg-white dark:bg-gray-800 
+              border-r border-gray-200 dark:border-gray-700
+              ${isDrawerOpen ? "w-64" : "w-20"}
+            `}
         id="drawer-navigation"
       >
-        <div className="overflow-y-auto py-5 px-3 h-full bg-white dark:bg-gray-800">
+        <div className="overflow-y-auto pt-12 pb-6 px-4 h-full">
           <form action="#" method="GET" className="md:hidden mb-2">
             <label htmlFor="sidebar-search" className="sr-only">
               Search
@@ -321,7 +402,17 @@ const Header: React.FC = () => {
                   <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
                   <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
                 </svg>
-                <span className="ml-3">Dashboard</span>
+                <span
+                  className={`ml-3 whitespace-nowrap transition-all duration-300 
+                              ${
+                                !isDrawerOpen
+                                  ? "opacity-0 hidden"
+                                  : "opacity-100 block"
+                              }
+                            `}
+                >
+                  Dashboard
+                </span>
               </Link>
             </li>
             <li>
@@ -342,7 +433,15 @@ const Header: React.FC = () => {
                     clipRule="evenodd"
                   ></path>
                 </svg>
-                <span className="flex-1 ml-3 text-left whitespace-nowrap">
+                <span
+                  className={`ml-3 whitespace-nowrap transition-all duration-300 
+                              ${
+                                !isDrawerOpen
+                                  ? "opacity-0 hidden"
+                                  : "opacity-100 block"
+                              }
+                            `}
+                >
                   Tickets
                 </span>
               </Link>
@@ -351,8 +450,6 @@ const Header: React.FC = () => {
               <Link
                 to="/contacts"
                 className="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                aria-controls="dropdown-sales"
-                data-collapse-toggle="dropdown-sales"
               >
                 <svg
                   aria-hidden="true"
@@ -367,7 +464,15 @@ const Header: React.FC = () => {
                     clip-rule="evenodd"
                   ></path>
                 </svg>
-                <span className="flex-1 ml-3 text-left whitespace-nowrap">
+                <span
+                  className={`ml-3 whitespace-nowrap transition-all duration-300 
+                              ${
+                                !isDrawerOpen
+                                  ? "opacity-0 hidden"
+                                  : "opacity-100 block"
+                              }
+                            `}
+                >
                   Contacts
                 </span>
               </Link>
@@ -376,8 +481,6 @@ const Header: React.FC = () => {
               <Link
                 to="/companies"
                 className="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                aria-controls="dropdown-sales"
-                data-collapse-toggle="dropdown-sales"
               >
                 <svg
                   aria-hidden="true"
@@ -392,18 +495,28 @@ const Header: React.FC = () => {
                     clip-rule="evenodd"
                   ></path>
                 </svg>
-                <span className="flex-1 ml-3 text-left whitespace-nowrap">
+                <span
+                  className={`ml-3 whitespace-nowrap transition-all duration-300 
+                              ${
+                                !isDrawerOpen
+                                  ? "opacity-0 hidden"
+                                  : "opacity-100 block"
+                              }
+                            `}
+                >
                   Companies
                 </span>
               </Link>
             </li>
-            <li>
+            {/* Reports Dropdown */}
+            <li className="relative">
               <button
                 type="button"
-                className="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                aria-controls="dropdown-authentication"
-                data-collapse-toggle="dropdown-authentication"
+                onClick={() => setShowReports(!showReports)}
+                className="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg 
+               transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
               >
+                {/* Icon */}
                 <svg
                   aria-hidden="true"
                   className="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
@@ -412,82 +525,206 @@ const Header: React.FC = () => {
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
-                    fill-rule="evenodd"
+                    fillRule="evenodd"
+                    clipRule="evenodd"
                     d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                    clip-rule="evenodd"
                   ></path>
                 </svg>
-                <span className="flex-1 ml-3 text-left whitespace-nowrap">
+
+                {/* Text */}
+                <span
+                  className={`ml-3 whitespace-nowrap transition-all duration-300 ${
+                    !isDrawerOpen ? "opacity-0 hidden" : "opacity-100 block"
+                  }`}
+                >
                   Reports
                 </span>
+
+                {/* Arrow */}
                 <svg
                   aria-hidden="true"
-                  className="w-6 h-6"
+                  className={`w-6 h-6 transition-transform ${
+                    showReports ? "rotate-180" : ""
+                  }`}
                   fill="currentColor"
                   viewBox="0 0 20 20"
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
-                    fill-rule="evenodd"
+                    fillRule="evenodd"
+                    clipRule="evenodd"
                     d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clip-rule="evenodd"
                   ></path>
                 </svg>
               </button>
-              <ul
-                id="dropdown-authentication"
-                className="hidden py-2 space-y-2"
-              >
-                <li>
-                  <a
-                    href="#"
-                    className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                  >
-                    Sign In
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                  >
-                    Sign Up
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-                  >
-                    Forgot Password
-                  </a>
-                </li>
-              </ul>
+
+              {/* Dropdown Items */}
+              {isDrawerOpen ? (
+                <ul
+                  className={`${
+                    showReports ? "block" : "hidden"
+                  } py-2 space-y-2`}
+                >
+                  <li>
+                    <a
+                      href="#"
+                      className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg 
+                   transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Sign In
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#"
+                      className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg 
+                   transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Sign Up
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#"
+                      className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg 
+                   transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Forgot Password
+                    </a>
+                  </li>
+                </ul>
+              ) : (
+                <div className="absolute left-16 top-0 hidden group-hover:block w-48 bg-white dark:bg-gray-700 shadow-lg rounded-lg z-50">
+                  <ul className="py-2">
+                    <li>
+                      <a
+                        href="#"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                      >
+                        Sign In
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="#"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                      >
+                        Sign Up
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="#"
+                        className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                      >
+                        Forgot Password
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </li>
           </ul>
+
           <ul className="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
-            <li>
-              <a
-                href="#"
-                className="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white group"
+            <li className="relative">
+              <button
+                type="button"
+                onClick={() => setShowAdminDropdown(!showAdminDropdown)}
+                className="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
               >
+                {/* Icon */}
                 <svg
                   aria-hidden="true"
-                  className="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+                  className="flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
                   fill="currentColor"
                   viewBox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
                 >
                   <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
                   <path
-                    fill-rule="evenodd"
+                    fillRule="evenodd"
+                    clipRule="evenodd"
                     d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-                    clip-rule="evenodd"
                   ></path>
                 </svg>
-                <span className="ml-3">Admin Manage</span>
-              </a>
+
+                {/* Text */}
+                <span
+                  className={`ml-3 whitespace-nowrap transition-all duration-300 
+                            ${
+                              !isDrawerOpen
+                                ? "opacity-0 hidden"
+                                : "opacity-100 block"
+                            }
+                          `}
+                >
+                  Admin Manage
+                </span>
+
+                {/* Arrow */}
+                <svg
+                  aria-hidden="true"
+                  className={`w-6 h-6 transition-transform ${
+                    showAdminDropdown ? "rotate-180" : ""
+                  }`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  ></path>
+                </svg>
+              </button>
+
+              {/* Dropdown Items */}
+              {isDrawerOpen ? (
+                <ul
+                  className={`${
+                    showAdminDropdown ? "block" : "hidden"
+                  } py-2 space-y-2`}
+                >
+                  <li>
+                    <Link
+                      to="/create-user"
+                      className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Create User
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link
+                      to="/create-role"
+                      className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Create Role
+                    </Link>
+                  </li>
+                </ul>
+              ) : (
+                <div className="absolute left-16 top-0 hidden group-hover:block w-48 bg-white dark:bg-gray-700 shadow-lg rounded-lg z-50">
+                  <li>
+                    <a
+                      href="#"
+                      className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                    >
+                      Create User
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#"
+                      className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                    >
+                      Create Role
+                    </a>
+                  </li>
+                </div>
+              )}
             </li>
+
             <li>
               <a
                 href="#"
@@ -506,7 +743,17 @@ const Header: React.FC = () => {
                     clip-rule="evenodd"
                   ></path>
                 </svg>
-                <span className="ml-3">Help</span>
+                <span
+                  className={`ml-3 whitespace-nowrap transition-all duration-300 
+                              ${
+                                !isDrawerOpen
+                                  ? "opacity-0 hidden"
+                                  : "opacity-100 block"
+                              }
+                            `}
+                >
+                  Help
+                </span>
               </a>
             </li>
           </ul>

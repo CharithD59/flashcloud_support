@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useDrawer } from "../../context/DrawerContext";
 
 import {
   FaReply,
@@ -18,6 +19,12 @@ interface CcRecipients {
   rishui: boolean;
 }
 
+interface Attachment {
+  filename: string;
+  url: string;
+  size?: number;
+}
+
 interface Email {
   from: string;
   to: string;
@@ -25,6 +32,7 @@ interface Email {
   subject: string;
   date: string;
   body: string;
+  attachments?: Attachment[];
 }
 
 interface TicketData {
@@ -52,6 +60,8 @@ const ccOptions: { key: keyof CcRecipients; label: string }[] = [
 ];
 
 const TicketDetail: React.FC = () => {
+  const { isDrawerOpen } = useDrawer();
+  const mainMarginClass = isDrawerOpen ? "md:ml-64" : "md:ml-20";
   const { id } = useParams<{ id: string }>();
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState("");
@@ -144,27 +154,6 @@ const TicketDetail: React.FC = () => {
           return;
         }
 
-        // Format single or multiple email responses
-        /*const formattedEmails: Email[] = Array.isArray(data)
-          ? data.map((email) => ({
-              from: email.from || "Unknown",
-              to: email.to || "",
-              cc: email.cc || "",
-              subject: email.subject || "(No Subject)",
-              date: email.date || new Date().toLocaleString(),
-              body: email.html || email.text || "<p>(No message content)</p>",
-            }))
-          : [
-              {
-                from: data.from || "Unknown",
-                to: data.to || "",
-                cc: data.cc || "",
-                subject: data.subject || "(No Subject)",
-                date: data.date || new Date().toLocaleString(),
-                body: data.html || data.text || "<p>(No message content)</p>",
-              },
-            ];*/
-
         // Replace data mapping
         const formattedEmails: Email[] = Array.isArray(data)
           ? data.map((email: any) => ({
@@ -176,12 +165,16 @@ const TicketDetail: React.FC = () => {
                 ? new Date(email.date_received).toLocaleString()
                 : new Date().toLocaleString(),
               body: email.body || "<p>(No message content)</p>",
-              attachments:
-                email.attachments && email.attachments.length > 0
-                  ? email.attachments
-                      .split(",")
-                      .map((file: string) => file.trim())
-                  : [],
+              attachments: email.attachments
+                ? (() => {
+                    try {
+                      return JSON.parse(email.attachments);
+                    } catch (e) {
+                      console.error("Attachment JSON parse error", e);
+                      return [];
+                    }
+                  })()
+                : [],
             }))
           : [];
 
@@ -204,6 +197,44 @@ const TicketDetail: React.FC = () => {
       ...prev,
       [name]: !prev[name],
     }));
+  };
+
+  //update ticket dropdowns backend
+  const handleDropdownChange = async (field: string, value: string) => {
+    switch (field) {
+      case "status":
+        setStatus(value);
+        break;
+      case "priority":
+        setPriority(value);
+        break;
+      case "group":
+        setGroup(value);
+        break;
+      case "assignee":
+        setAssignee(value);
+        break;
+    }
+
+    // Call backend API
+    const mapFields: any = {
+      status: "state",
+      priority: "priority",
+      group: "group_type",
+      assignee: "assignee",
+    };
+
+    const backendField = mapFields[field];
+
+    try {
+      await fetch(`http://localhost:5000/api/tickets/${ticketData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [backendField]: value }),
+      });
+    } catch (err) {
+      console.error(`Failed to update ticket ${field}`, err);
+    }
   };
 
   // Handle reply submission
@@ -337,7 +368,7 @@ const TicketDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-      <main className="flex-1 p-4 md:ml-64 h-auto pt-20 flex">
+      <main className={`flex-1 p-4 ${mainMarginClass} h-auto pt-20 flex`}>
         <div className="flex-1 flex flex-col space-y-4 pr-4">
           {/* Action Buttons */}
           <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-3 border border-gray-200 dark:border-gray-700 flex space-x-2 overflow-x-auto">
@@ -744,6 +775,42 @@ const TicketDetail: React.FC = () => {
                       __html: email.body as string,
                     }}
                   />
+
+                  {/*Attachments*/}
+                  {email.attachments && email.attachments.length > 0 && (
+                    <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
+                      <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                        <FaPaperclip className="inline mr-2" />
+                        Attachments ({email.attachments.length})
+                      </h4>
+
+                      <ul className="space-y-2">
+                        {email.attachments.map((att, i) => (
+                          <li
+                            key={i}
+                            className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded shadow text-sm"
+                          >
+                            <div>
+                              <p className="font-medium">{att.filename}</p>
+                              {att.size && (
+                                <p className="text-xs text-gray-500">
+                                  {(att.size / 1024).toFixed(1)} KB
+                                </p>
+                              )}
+                            </div>
+
+                            <a
+                              href={`http://localhost:5000/api/emails/download/${att.filename}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {att.filename}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -776,7 +843,7 @@ const TicketDetail: React.FC = () => {
               <select
                 id="status"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => handleDropdownChange("status", e.target.value)}
                 className="block w-full rounded-lg bg-gray-50 border border-gray-300 text-gray-900 text-sm p-2.5 pr-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white appearance-none"
               >
                 {ticketData.statusOptions.map((option) => (
@@ -800,7 +867,9 @@ const TicketDetail: React.FC = () => {
               <select
                 id="priority"
                 value={priority}
-                onChange={(e) => setPriority(e.target.value)}
+                onChange={(e) =>
+                  handleDropdownChange("priority", e.target.value)
+                }
                 className="block w-full rounded-lg bg-gray-50 border border-gray-300 text-gray-900 text-sm p-2.5 pr-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white appearance-none"
               >
                 {ticketData.priorityOptions.map((option) => (
@@ -824,7 +893,7 @@ const TicketDetail: React.FC = () => {
               <select
                 id="group"
                 value={group}
-                onChange={(e) => setGroup(e.target.value)}
+                onChange={(e) => handleDropdownChange("group", e.target.value)}
                 className="block w-full rounded-lg bg-gray-50 border border-gray-300 text-gray-900 text-sm p-2.5 pr-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white appearance-none"
               >
                 {ticketData.groupOptions.map((option) => (
@@ -848,7 +917,9 @@ const TicketDetail: React.FC = () => {
               <select
                 id="assignee"
                 value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
+                onChange={(e) =>
+                  handleDropdownChange("assignee", e.target.value)
+                }
                 className="block w-full rounded-lg bg-gray-50 border border-gray-300 text-gray-900 text-sm p-2.5 pr-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white appearance-none"
               >
                 {ticketData.assigneeOptions.map((option) => (

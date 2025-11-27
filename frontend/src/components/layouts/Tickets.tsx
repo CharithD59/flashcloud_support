@@ -3,6 +3,7 @@ import { Badge, Pagination } from "flowbite-react";
 import { User, Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSearch } from "../../context/SearchContext";
+import { useDrawer } from "../../context/DrawerContext";
 
 type Ticket = {
   id: number;
@@ -13,7 +14,7 @@ type Ticket = {
   daysAgo: number;
   overdueBy: number;
   priority: string;
-  assignee: string;
+  group_type: string;
   state: string;
   initial: string;
 };
@@ -56,6 +57,7 @@ const Tickets: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { searchTerm } = useSearch();
+  const { isDrawerOpen } = useDrawer();
 
   useEffect(() => {
     let cancelled = false;
@@ -101,9 +103,13 @@ const Tickets: React.FC = () => {
     };
   }, [currentPage, searchTerm]);
 
+  const mainMarginClass = isDrawerOpen ? "md:ml-64" : "md:ml-20";
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <main className="p-4 md:ml-64 h-auto pt-20 space-y-4">
+      <main
+        className={`p-4 ${mainMarginClass} h-auto pt-20 space-y-4 transition-all duration-300`}
+      >
         {loading && (
           <div className="text-sm text-gray-500 dark:text-gray-400">
             Loading…
@@ -156,7 +162,9 @@ const Tickets: React.FC = () => {
               <div className="flex flex-col items-end space-y-1">
                 <Badge
                   color={
-                    ticket.priority.toLowerCase() === "high"
+                    ticket.priority.toLowerCase() === "critical"
+                      ? "pink"
+                      : ticket.priority.toLowerCase() === "high"
                       ? "failure"
                       : ticket.priority.toLowerCase() === "medium"
                       ? "warning"
@@ -166,7 +174,7 @@ const Tickets: React.FC = () => {
                   {ticket.priority}
                 </Badge>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  👤 {ticket.assignee}
+                  👤 {ticket.group_type}
                 </p>
 
                 <Link to={`/ticket/${ticket.id}`}>
@@ -179,7 +187,9 @@ const Tickets: React.FC = () => {
           </div>
         ))}
       </main>
-      <div className="p-4 md:ml-64 flex justify-end mb-6">
+      <div
+        className={`p-4 ${mainMarginClass} flex justify-end mb-6 transition-all duration-300`}
+      >
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

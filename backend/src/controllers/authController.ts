@@ -1,93 +1,105 @@
 import { Request, Response } from "express";
-import { pool } from "../config/db";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
+import {
+  getUserByEmail,
+  verifyPassword,
+  createUser,
+} from "../models/userModel";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key";
-
-export const loginUser = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
+export async function login(req: Request, res: Response) {
   try {
+    const { email, password } = req.body;
+
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
-    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [
-      email,
-    ]);
-    const users = rows as any[];
+    const user = await getUserByEmail(email);
+    if (!user)
+      return res.status(401).json({ message: "Invalid email or password" });
 
-    if (users.length === 0) {
-      return res.status(404).json({ error: "User not found" });
+    if (user.status !== "active") {
+      return res.status(403).json({ message: "User is inactive" });
     }
 
-    const user = users[0];
+    const isMatch = await verifyPassword(user, password);
+    if (!isMatch)
+      return res.status(401).json({ message: "Invalid email or password" });
 
-    // Compare provided password with hashed password
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+    const payload = { id: user.id, email: user.email, roleId: user.roleId };
+    const secret = process.env.JWT_SECRET;
+    const envExpires = process.env.JWT_EXPIRES_IN;
+    const expiresIn: SignOptions["expiresIn"] =
+      envExpires && /^\d+$/.test(envExpires)
+        ? Number(envExpires)
+        : ((envExpires ?? "1h") as SignOptions["expiresIn"]);
+    const options: SignOptions = { expiresIn };
 
-    // Generate JWT Token
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    if (!secret) throw new Error("JWT_SECRET is not defined");
 
-    return res.status(200).json({
+    const token = jwt.sign(payload, secret, options);
+
+    // Send response compatible with frontend
+    res.json({
       message: "Login successful",
       token,
       user: {
         id: user.id,
-        name: user.name,
+        fname: user.fname,
+        lname: user.lname,
         email: user.email,
-        role: user.role,
+        roleId: user.roleId,
+        roleName: user.roleName,
       },
     });
-  } catch (error: any) {
-    console.error("Login error:", error);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-};
+}
 
-export const registerUser = async (req: Request, res: Response) => {
-  const { name, email, password, role } = req.body;
-
+export async function register(req: Request, res: Response) {
   try {
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
+    const { fname, lname, email, password, roleId, status } = req.body;
+
+    if (!fname || !lname || !email || !password || !roleId || !status) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check if user exists
-    const [existing] = await pool.query("SELECT * FROM users WHERE email = ?", [
+    // Check if email already exists
+    const existingUser = await getUserByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({ message: "Email already exists" });
+    }
+
+    // Create new user
+    const newUser = await createUser({
+      fname,
+      lname,
       email,
-    ]);
-    if ((existing as any[]).length > 0) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
+      password, // currently plain text, can hash later
+      roleId: Number(roleId),
+      status,
+    });
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert new user
-    await pool.query(
-      "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-      [name, email, hashedPassword, role || "user"]
-    );
-
-    return res.status(201).json({ message: "User registered successfully" });
-  } catch (error: any) {
-    console.error("Registration error:", error);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
+    res.status(201).json({
+      message: "User created successfully",
+      user: {
+        id: newUser.id,
+        fname: newUser.fname,
+        lname: newUser.lname,
+        email: newUser.email,
+        roleId: newUser.roleId,
+        status: newUser.status,
+      },
+    });
+  } catch (err) {
+    console.error("Error creating user:", err);
+    res.status(500).json({ message: "Server error" });
   }
-};
+}
