@@ -1,22 +1,54 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Add this import
-import { Button, Checkbox, Label, TextInput } from 'flowbite-react';
-import FlashLogo from '../../assets/logo.png'
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; // Add this import
+import { Button, Checkbox, Label, TextInput } from "flowbite-react";
+import FlashLogo from "../../assets/logo.png";
+import { Link } from "react-router-dom";
+import axios from "axios";
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate(); // Initialize navigate
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
     // Your login logic (fake validation for now)
-    if (email && password) {
+    /* if (email && password) {
       console.log({ email, password });
-      navigate('/dashboard'); // Navigate to dashboard
+      navigate("/dashboard"); // Navigate to dashboard
     } else {
       // Optionally show error
+    }*/
+
+    if (!email || !password) {
+      setError("Please enter email and password");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        {
+          email,
+          password,
+        }
+      );
+
+      // Save JWT token in localStorage
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+
+      // Navigate to dashboard
+      navigate("/dashboard");
+    } catch (err: any) {
+      if (err.response && err.response.data) {
+        setError(err.response.data.message || "Login failed");
+      } else {
+        setError("Login failed. Please try again.");
+      }
     }
   };
 
@@ -31,6 +63,10 @@ const LoginPage: React.FC = () => {
             </h1>
           </div>
 
+          {error && (
+            <div className="text-red-600 text-sm text-center">{error}</div>
+          )}
+
           <form className="space-y-4" onSubmit={handleLogin}>
             <div>
               <Label htmlFor="email" />
@@ -40,7 +76,7 @@ const LoginPage: React.FC = () => {
                 placeholder="name@company.com"
                 required
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
@@ -51,7 +87,7 @@ const LoginPage: React.FC = () => {
                 placeholder="••••••••"
                 required
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
@@ -60,7 +96,10 @@ const LoginPage: React.FC = () => {
                 <Checkbox id="remember" />
                 <Label htmlFor="remember">Remember me</Label>
               </div>
-              <a href="#" className="text-sm text-primary-600 hover:underline dark:text-primary-500">
+              <a
+                href="#"
+                className="text-sm text-primary-600 hover:underline dark:text-primary-500"
+              >
                 Forgot password?
               </a>
             </div>
@@ -70,10 +109,13 @@ const LoginPage: React.FC = () => {
             </Button>
 
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-              Don’t have an account yet?{' '}
-              <a href="#" className="font-medium text-primary-600 hover:underline dark:text-primary-500">
+              Don’t have an account yet?{" "}
+              <Link
+                to="/signup"
+                className="font-medium text-primary-600 hover:underline dark:text-primary-500"
+              >
                 Sign up
-              </a>
+              </Link>
             </p>
           </form>
         </div>
