@@ -7,7 +7,7 @@ const router = express.Router();
 router.get("/download/:filename", (req, res) => {
   const filename = req.params.filename;
 
-  const fullPath = path.resolve("src/uploads/emails", filename);
+  const fullPath = path.resolve("uploads", filename);
 
   if (!fs.existsSync(fullPath)) {
     return res.status(404).json({ error: "File not found" });

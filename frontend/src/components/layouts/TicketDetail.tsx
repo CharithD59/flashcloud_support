@@ -10,19 +10,23 @@ import {
   FaArrowsAltH,
   FaChevronDown,
   FaPaperclip,
+  FaFileAlt,
 } from "react-icons/fa";
 
-interface CcRecipients {
+/*interface CcRecipients {
   akila: boolean;
   machiavarathnayake: boolean;
   nuwanj: boolean;
   rishui: boolean;
-}
+}*/
 
 interface Attachment {
   filename: string;
   url: string;
   size?: number;
+  path?: string;
+  mimeType?: string;
+  storedName?: string;
 }
 
 interface Email {
@@ -52,12 +56,12 @@ interface TicketData {
   emails: Email[];
 }
 
-const ccOptions: { key: keyof CcRecipients; label: string }[] = [
+/*const ccOptions: { key: keyof CcRecipients; label: string }[] = [
   { key: "akila", label: "akila@iphonik.com" },
   { key: "machiavarathnayake", label: "machiavarathnayake@sampath.lk" },
   { key: "nuwanj", label: "nuwanj@sampath.lk" },
   { key: "rishui", label: "rishui.hettiarachchi@dialog.lk" },
-];
+];*/
 
 const TicketDetail: React.FC = () => {
   const { isDrawerOpen } = useDrawer();
@@ -65,12 +69,16 @@ const TicketDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState("");
-  const [ccRecipients, setCcRecipients] = useState<CcRecipients>({
+  /*const [ccRecipients, setCcRecipients] = useState<CcRecipients>({
     akila: false,
     machiavarathnayake: true,
     nuwanj: true,
     rishui: true,
-  });
+  });*/
+  const [ccList, setCcList] = useState<string[]>([]);
+  const [ccRecipients, setCcRecipients] = useState<{
+    [email: string]: boolean;
+  }>({});
   const [isForwarding, setIsForwarding] = useState(false);
   const [forwardContent, setForwardContent] = useState("");
   const [forwardRecipients, setForwardRecipients] = useState({
@@ -84,15 +92,22 @@ const TicketDetail: React.FC = () => {
   // Dummy data with proper typing
   const ticketData: TicketData = {
     id: id,
-    subject: "Re: Report in Accuracy in Iphonik system",
-    status: "Open",
-    priority: "Low",
-    group: "Tech Support",
-    assignee: "Charith Dilanka",
-    reportedBy: "IT Service Desk",
-    reportedDate: "10 days ago (Mon, 3 Jun 2024 at 11:50 AM)",
+    //subject: "Re: Report in Accuracy in Iphonik system",
+    //status: "Open",
+    //priority: "Low",
+    //group: "Tech Support",
+    //assignee: "Charith Dilanka",
+    //reportedBy: "IT Service Desk",
+    //reportedDate: "10 days ago (Mon, 3 Jun 2024 at 11:50 AM)",
+    subject: "",
+    status: "",
+    priority: "",
+    group: "",
+    assignee: "",
+    reportedBy: "",
+    reportedDate: "",
     resolutionDueDate: "Thu, Jun 12, 2025 03:55 PM",
-    statusOptions: ["Open", "Pending", "Resolved", "Closed"],
+    statusOptions: ["Open", "In Progress", "Resolved", "Closed"],
     priorityOptions: ["Low", "Medium", "High", "Critical"],
     groupOptions: ["Tech Support", "Development", "QA", "Operations"],
     assigneeOptions: [
@@ -101,7 +116,7 @@ const TicketDetail: React.FC = () => {
       "Rajendran Sathiyaseelan",
       "Lishara Senanayake",
     ],
-    emails: [
+    /*emails: [
       {
         from: "charanaranasinghe@sampath.lk",
         to: "support@iphonik.com",
@@ -110,7 +125,8 @@ const TicketDetail: React.FC = () => {
         date: "Mon, 3 Jun 2024 at 11:50 AM",
         body: "<div><p>Dear Support Team,<br/>There seems to be an inaccuracy in the Iphonik system report. Please investigate.</p><p>Regards,<br/>Charana Ranasinghe</p></div>",
       },
-    ],
+    ],*/
+    emails: [],
   };
 
   // State for dropdown values
@@ -126,7 +142,7 @@ const TicketDetail: React.FC = () => {
         setLoading(true);
 
         const res = await fetch(
-          "http://localhost:5000/api/tickets/emails/inbox"
+          `http://localhost:5000/api/tickets/${id}/emails`
         );
 
         // Check if backend responded
@@ -191,13 +207,30 @@ const TicketDetail: React.FC = () => {
     fetchUnreadEmails();
   }, []);
 
+  useEffect(() => {
+    if (emails.length > 0 && emails[0].cc) {
+      const list = emails[0].cc
+        .split(",")
+        .map((cc: string) => cc.trim())
+        .filter((cc: string) => cc.length > 0);
+
+      setCcList(list);
+
+      // Set default checked = true (you can change this)
+      const defaultState: { [key: string]: boolean } = {};
+      list.forEach((email) => (defaultState[email] = true));
+
+      setCcRecipients(defaultState);
+    }
+  }, [emails]);
+
   // Toggle CC recipient selection
-  const toggleCcRecipient = (name: keyof CcRecipients) => {
+  /*const toggleCcRecipient = (name: keyof CcRecipients) => {
     setCcRecipients((prev) => ({
       ...prev,
       [name]: !prev[name],
     }));
-  };
+  };*/
 
   //update ticket dropdowns backend
   const handleDropdownChange = async (field: string, value: string) => {
@@ -241,9 +274,9 @@ const TicketDetail: React.FC = () => {
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const selectedCc = ccOptions
-      .filter((r) => ccRecipients[r.key])
-      .map((r) => r.label);
+    const selectedCc = Object.keys(ccRecipients).filter(
+      (email) => ccRecipients[email] === true
+    );
 
     const originalEmail = emails[0];
 
@@ -449,7 +482,7 @@ const TicketDetail: React.FC = () => {
                       Cc:
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {ccOptions.map((recipient) => (
+                      {/*{ccOptions.map((recipient) => (
                         <label
                           key={recipient.key}
                           className="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
@@ -462,6 +495,27 @@ const TicketDetail: React.FC = () => {
                           />
                           <span className="ml-3 text-sm text-gray-800 dark:text-gray-200">
                             {recipient.label}
+                          </span>
+                        </label>
+                      ))}*/}
+                      {ccList.map((email) => (
+                        <label
+                          key={email}
+                          className="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={ccRecipients[email] || false}
+                            onChange={() =>
+                              setCcRecipients((prev) => ({
+                                ...prev,
+                                [email]: !prev[email],
+                              }))
+                            }
+                            className="form-checkbox h-5 w-5 text-blue-600 dark:text-blue-400 rounded border-gray-300 dark:border-gray-600"
+                          />
+                          <span className="ml-3 text-sm text-gray-800 dark:text-gray-200">
+                            {email}
                           </span>
                         </label>
                       ))}
@@ -777,7 +831,7 @@ const TicketDetail: React.FC = () => {
                   />
 
                   {/*Attachments*/}
-                  {email.attachments && email.attachments.length > 0 && (
+                  {/* {email.attachments && email.attachments.length > 0 && (
                     <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
                       <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2">
                         <FaPaperclip className="inline mr-2" />
@@ -808,6 +862,65 @@ const TicketDetail: React.FC = () => {
                             </a>
                           </li>
                         ))}
+                      </ul>
+                    </div>
+                  )} */}
+                  {/* Attachments Section */}
+                  {email.attachments && email.attachments.length > 0 && (
+                    <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
+                      <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center">
+                        <FaPaperclip className="mr-2" /> Attachments (
+                        {email.attachments.length})
+                      </h4>
+
+                      <ul className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {email.attachments.map((att, i) => {
+                          const isImage = att.mimeType?.startsWith("image/");
+
+                          return (
+                            <li
+                              key={i}
+                              className="flex flex-col items-center justify-center p-2 bg-white dark:bg-gray-800 rounded shadow text-sm"
+                            >
+                              {isImage ? (
+                                // Image preview
+                                <img
+                                  src={`http://localhost:5000${att.path}`}
+                                  alt={att.filename}
+                                  className="w-24 h-24 object-cover rounded mb-2 border border-gray-300 dark:border-gray-600"
+                                />
+                              ) : (
+                                // File icon + name
+                                <div className="flex flex-col items-center mb-2">
+                                  <FaFileAlt
+                                    size={32}
+                                    className="text-gray-500 dark:text-gray-300 mb-1"
+                                  />
+                                </div>
+                              )}
+
+                              {/* File name + size */}
+                              <p className="font-medium text-center break-all">
+                                {att.filename}
+                              </p>
+                              {att.size && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {(att.size / 1024).toFixed(1)} KB
+                                </p>
+                              )}
+
+                              {/* Download link */}
+                              <a
+                                href={`http://localhost:5000/api/emails/download/${att.storedName}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-1 text-blue-600 dark:text-blue-400 text-xs hover:underline"
+                              >
+                                Download
+                              </a>
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   )}

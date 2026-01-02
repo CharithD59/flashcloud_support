@@ -2,7 +2,8 @@ import { Router } from "express";
 import {
   list,
   sendTicketEmail,
-  getSavedEmails,
+  //getSavedEmails,
+  getEmailsByTicket,
   replyEmail,
   forwardEmailController,
   updateTicket,
@@ -17,7 +18,9 @@ router.get("/ticket", list);
 
 router.post("/:id/send-email", sendTicketEmail);
 
-router.get("/emails/inbox", getSavedEmails);
+//router.get("/emails/inbox", getSavedEmails);
+
+router.get("/:ticketId/emails", getEmailsByTicket);
 
 router.post("/emails/reply", upload.array("attachments"), replyEmail);
 

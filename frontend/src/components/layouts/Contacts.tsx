@@ -236,7 +236,7 @@ function Contacts() {
         )}
 
         {/* Contact table */}
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 bg-white dark:bg-gray-900 shadow-sm">
+        <div className="overflow-x-auto overflow-y-auto h-[438px] rounded-xl border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 bg-white dark:bg-gray-900 shadow-sm">
           <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
             <thead className="bg-[#eeeeee] dark:bg-gray-800 rounded-t-xl">
               <tr>

@@ -8,6 +8,7 @@ import companiesRoutes from "./routes/companiesRoutes";
 import authRoutes from "./routes/authRoutes";
 import roleRoutes from "./routes/roleRoutes";
 import emailRoutes from "./routes/emailRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 const app = express();
 
@@ -23,7 +24,7 @@ app.use(express.json());
 // serve /uploads statically
 app.use(
   "/uploads",
-  express.static(path.resolve("src/uploads"), {
+  express.static(path.resolve("uploads"), {
     maxAge: "7d",
     extensions: ["jpg", "jpeg", "png", "gif", "webp"],
   })
@@ -36,5 +37,6 @@ app.use("/api/companies", companiesRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/emails", emailRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 export default app;
