@@ -110,12 +110,7 @@ const TicketDetail: React.FC = () => {
     statusOptions: ["Open", "In Progress", "Resolved", "Closed"],
     priorityOptions: ["Low", "Medium", "High", "Critical"],
     groupOptions: ["Tech Support", "Development", "QA", "Operations"],
-    assigneeOptions: [
-      "Charith Dilanka",
-      "Adbheesha Fernando",
-      "Rajendran Sathiyaseelan",
-      "Lishara Senanayake",
-    ],
+    assigneeOptions: [""],
     /*emails: [
       {
         from: "charanaranasinghe@sampath.lk",
@@ -135,6 +130,7 @@ const TicketDetail: React.FC = () => {
   const [group, setGroup] = useState(ticketData.group);
   const [assignee, setAssignee] = useState(ticketData.assignee);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [assigneeOptions, setAssigneeOptions] = useState([]);
 
   useEffect(() => {
     const fetchUnreadEmails = async () => {
@@ -223,6 +219,20 @@ const TicketDetail: React.FC = () => {
       setCcRecipients(defaultState);
     }
   }, [emails]);
+
+  useEffect(() => {
+    const fetchAssignees = async () => {
+      try {
+        const res = await fetch(`http://localhost:5000/api/users/assignees`);
+        const data = await res.json();
+        setAssigneeOptions(data);
+      } catch (err) {
+        console.error("Failed to load assignees", err);
+      }
+    };
+
+    fetchAssignees();
+  }, []);
 
   // Toggle CC recipient selection
   /*const toggleCcRecipient = (name: keyof CcRecipients) => {
@@ -1035,7 +1045,7 @@ const TicketDetail: React.FC = () => {
                 }
                 className="block w-full rounded-lg bg-gray-50 border border-gray-300 text-gray-900 text-sm p-2.5 pr-8 dark:bg-gray-700 dark:border-gray-600 dark:text-white appearance-none"
               >
-                {ticketData.assigneeOptions.map((option) => (
+                {assigneeOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>

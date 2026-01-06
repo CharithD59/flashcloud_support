@@ -66,7 +66,7 @@ export async function getTickets(
       UPPER(LEFT(TRIM(author), 1)) AS initial
     FROM tickets
     ${searchCondition}
-    ORDER BY id DESC
+    ORDER BY created_at DESC
     LIMIT ? OFFSET ?;
     `,
     search

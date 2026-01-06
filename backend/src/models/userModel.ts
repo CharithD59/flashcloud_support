@@ -99,3 +99,17 @@ export async function createUser(user: {
     updatedAt: new Date().toISOString(),
   };
 }
+
+//get all assignees (fname + lname)
+export async function getAssignees(): Promise<string[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `
+    SELECT CONCAT(fname, ' ', lname) AS fullName
+    FROM tbl_user_accounts
+    WHERE status = 'active'
+    ORDER BY fname
+    `
+  );
+
+  return rows.map((row) => String(row.fullName));
+}

@@ -59,47 +59,57 @@ const Tickets: React.FC = () => {
   const { searchTerm } = useSearch();
   const { isDrawerOpen } = useDrawer();
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchTickets = async (
+    currentPage: number,
+    searchTerm: string,
+    cancelledRef: { cancelled: boolean }
+  ) => {
+    setLoading(true);
+    setError(null);
 
-    const fetchTickets = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const query = searchTerm
-          ? `&search=${encodeURIComponent(searchTerm)}`
-          : "";
-        const res = await fetch(
-          `${API_BASE}/api/tickets/ticket?page=${currentPage}&pageSize=${ITEMS_PER_PAGE}${query}`
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    try {
+      const query = searchTerm
+        ? `&search=${encodeURIComponent(searchTerm)}`
+        : "";
 
-        const data: PaginatedTickets = await res.json();
-        if (!cancelled) {
-          const processed = (data.items || []).map((ticket) => {
-            const initial =
-              ticket.author && ticket.author.trim().length > 0
-                ? ticket.author.trim().charAt(0).toUpperCase()
-                : "?";
+      const res = await fetch(
+        `${API_BASE}/api/tickets/ticket?page=${currentPage}&pageSize=${ITEMS_PER_PAGE}${query}`
+      );
 
-            const bgColor = getColorForInitial(initial);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-            return { ...ticket, initial, bgColor };
-          });
+      const data: PaginatedTickets = await res.json();
 
-          setItems(processed);
-          setTotalPages(data.totalPages || 1);
-        }
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "Failed to load tickets");
-      } finally {
-        if (!cancelled) setLoading(false);
+      if (!cancelledRef.cancelled) {
+        const processed = (data.items || []).map((ticket) => {
+          const initial =
+            ticket.author && ticket.author.trim().length > 0
+              ? ticket.author.trim().charAt(0).toUpperCase()
+              : "?";
+
+          const bgColor = getColorForInitial(initial);
+          return { ...ticket, initial, bgColor };
+        });
+
+        setItems(processed);
+        setTotalPages(data.totalPages || 1);
       }
-    };
+    } catch (e: any) {
+      if (!cancelledRef.cancelled) {
+        setError(e?.message ?? "Failed to load tickets");
+      }
+    } finally {
+      if (!cancelledRef.cancelled) {
+        setLoading(false);
+      }
+    }
+  };
 
-    fetchTickets();
+  useEffect(() => {
+    const cancelledRef = { cancelled: false };
+    fetchTickets(currentPage, searchTerm, cancelledRef);
     return () => {
-      cancelled = true;
+      cancelledRef.cancelled = true;
     };
   }, [currentPage, searchTerm]);
 
