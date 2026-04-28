@@ -565,7 +565,7 @@ const Header: React.FC = () => {
                     showReports ? "block" : "hidden"
                   } py-2 space-y-2`}
                 >
-                  <li>
+                  {/* <li>
                     <a
                       href="#"
                       className="flex items-center p-2 pl-11 w-full text-base font-medium text-gray-900 rounded-lg 
@@ -591,12 +591,12 @@ const Header: React.FC = () => {
                     >
                       Forgot Password
                     </a>
-                  </li>
+                  </li> */}
                 </ul>
               ) : (
                 <div className="absolute left-16 top-0 hidden group-hover:block w-48 bg-white dark:bg-gray-700 shadow-lg rounded-lg z-50">
                   <ul className="py-2">
-                    <li>
+                    {/* <li>
                       <a
                         href="#"
                         className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
@@ -619,7 +619,7 @@ const Header: React.FC = () => {
                       >
                         Forgot Password
                       </a>
-                    </li>
+                    </li> */}
                   </ul>
                 </div>
               )}

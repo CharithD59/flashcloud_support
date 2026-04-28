@@ -142,32 +142,16 @@ export async function updateTicket(req: Request, res: Response) {
   }
 }
 
-//get emails from inbox
-// export async function getSavedEmails(req: Request, res: Response) {
-//   try {
-//     await fetchAndSaveLatestEmails();
-
-//     const [rows] = await pool.query(
-//       "SELECT * FROM received_emails ORDER BY date_received DESC"
-//     );
-
-//     res.status(200).json(rows);
-//   } catch (err) {
-//     console.error("Error fetching emails:", err);
-//     res.status(500).json({ message: "Failed to fetch emails" });
-//   }
-// }
-
 //get emails by ticket id
 export async function getEmailsByTicket(req: Request, res: Response) {
   try {
-    await fetchAndSaveLatestEmails();
+    //await fetchAndSaveLatestEmails();
 
     const { ticketId } = req.params;
 
     const [rows] = await pool.query(
       `SELECT *
-       FROM received_emails
+       FROM tbl_email_receive
        WHERE ticket_id = ?
        ORDER BY date_received ASC`,
       [ticketId]

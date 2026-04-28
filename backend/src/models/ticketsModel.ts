@@ -41,7 +41,7 @@ export async function getTickets(
 
   // Total count
   const [countRows] = await pool.query<RowDataPacket[]>(
-    `SELECT COUNT(*) AS total FROM tickets ${searchCondition}`,
+    `SELECT COUNT(*) AS total FROM tbl_ticket_det ${searchCondition}`,
     search ? [searchValue, searchValue, searchValue] : []
   );
   const total = Number((countRows[0] as any)?.total ?? 0);
@@ -64,7 +64,7 @@ export async function getTickets(
       GREATEST(TIMESTAMPDIFF(DAY, due_at, NOW()), 0) AS overdueBy,
       -- initial from author's first non-empty char
       UPPER(LEFT(TRIM(author), 1)) AS initial
-    FROM tickets
+    FROM tbl_ticket_det
     ${searchCondition}
     ORDER BY created_at DESC
     LIMIT ? OFFSET ?;
@@ -100,7 +100,7 @@ export async function getTicketById(id: number): Promise<Ticket | null> {
       GREATEST(TIMESTAMPDIFF(DAY, created_at, NOW()), 0) AS daysAgo,
       GREATEST(TIMESTAMPDIFF(DAY, due_at, NOW()), 0) AS overdueBy,
       UPPER(LEFT(TRIM(author), 1)) AS initial
-    FROM tickets
+    FROM tbl_ticket_det
     WHERE id = ?
     LIMIT 1;
     `,
@@ -145,7 +145,7 @@ export async function updateTicketById(
   values.push(id);
 
   await pool.query(
-    `UPDATE tickets SET ${fields.join(", ")} WHERE id = ?`,
+    `UPDATE tbl_ticket_det SET ${fields.join(", ")} WHERE id = ?`,
     values
   );
 
